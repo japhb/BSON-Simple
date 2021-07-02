@@ -1,0 +1,11 @@
+use v6.d;
+use Test;
+
+
+use BSON::Simple;
+
+
+pass "all modules loaded successfully";
+
+
+done-testing;
