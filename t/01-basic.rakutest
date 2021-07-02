@@ -1,0 +1,6 @@
+use Test;
+use BSON::Simple;
+
+pass "replace me";
+
+done-testing;
