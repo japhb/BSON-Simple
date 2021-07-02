@@ -12,6 +12,11 @@ use BSON::Simple;
 # Encode a Raku value to BSON, or vice-versa
 my $bson = bson-encode($value);
 my $val  = bson-decode($bson);
+
+# Request warnings when decoding deprecated BSON element types
+# (default is to ignore deprecations and handle all known element types)
+my $*BSON_SIMPLE_WARN_DEPRECATED = True;
+my $bad  = bson-decode($deprecated);     # Warns, but returns decoding anyway
 ```
 
 DESCRIPTION

@@ -1,4 +1,4 @@
-unit class BSON::Simple:auth<zef:japhb>:api<0>:ver<0.0.1>;
+unit module BSON::Simple:auth<zef:japhb>:api<0>:ver<0.0.1>;
 
 
 enum BSONType (
@@ -35,6 +35,9 @@ enum BSONSubtype (
     BSON_Encrypted   => 6,
     BSON_UserDefined => 128,
 );
+
+
+PROCESS::<$BSON_SIMPLE_WARN_DEPRECATED> = False;
 
 
 # Encode a Raku data structure into BSON
@@ -130,7 +133,8 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
                 when Instant {
                     $buf.write-uint8($pos++, BSON_Datetime);
                     write-cstring($key);
-                    $buf.write-int64($pos, ($_ * 1000).Int, LittleEndian);
+                    my $ms = (.to-posix[0] * 1000).Int;
+                    $buf.write-int64($pos, $ms, LittleEndian);
                     $pos += 8;
                 }
                 when Real {
@@ -189,6 +193,146 @@ multi bson-decode(Blob:D $bson) is export {
 
 # Decode a BSON document into native Raku structures, starting from buffer position $pos
 multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
+    my &read-cstring = -> {
+        my $p = $pos;
+        ++$p while $bson[$p];
+
+        my $string = $bson.subbuf($pos, $p - $pos).decode;
+        $pos = $p + 1;
+
+        $string
+    }
+
+    my &read-string = -> {
+        my $bytes = $bson.read-int32($pos, LittleEndian);
+        $pos += 4;
+        die "Invalid string length $bytes" if $bytes < 1 || $pos + $bytes > $bson.elems;
+
+        my $string = $bson.subbuf($pos, $bytes - 1).decode;
+        $pos += $bytes;
+
+        $string
+    }
+
+    my &read-binary = -> {
+        my $bytes = $bson.read-int32($pos, LittleEndian);
+        $pos += 4;
+        my $subtype = $bson.read-uint8($pos++);
+
+        my $blob = $bson.subbuf($pos, $bytes);
+        $pos += $bytes;
+
+        ($subtype, $blob)
+    }
+
+    my sub decode-document(Bool :$as-array) {
+        # Check document size isn't impossible
+        my $len = $bson.read-int32($pos, LittleEndian);
+        die "Document too short" if $len < 5 || $pos + $len > $bson.elems;
+        $pos += 4;
+
+        # Look for elements
+        my @pairs;
+        while $bson.read-uint8($pos++) -> $type {
+            my $pair = decode-element($type);
+            @pairs.push($pair);
+        }
+
+        hash(@pairs)
+    }
+
+    my sub decode-element($type) {
+        my Str:D $key = read-cstring;
+        my Mu    $value;
+
+        sub warn-deprecated() {
+            warn "Deprecated BSON type $type at pos $pos"
+                if $*BSON_SIMPLE_WARN_DEPRECATED;
+        }
+
+        given $type {
+            when BSON_Double {
+                $value = $bson.read-num64($pos, LittleEndian);
+                $pos  += 8;
+            }
+            when BSON_String {
+                $value = read-string;
+            }
+            when BSON_Document {
+                $value = decode-document;
+            }
+            when BSON_Array {
+                $value = decode-document :as-array;
+            }
+            when BSON_Binary {
+                my ($subtype, $blob) = read-binary;
+                $value = $blob;
+            }
+            when BSON_Undefined {
+                warn-deprecated;
+                $value = Mu;
+            }
+            when BSON_ObjectId {
+                $value = $bson.subbuf($pos, 12);
+                $pos  += 12;
+            }
+            when BSON_Boolean {
+                $value = so $bson.read-uint8($pos++);
+            }
+            when BSON_Datetime {
+                my $ms = $bson.read-int64($pos, LittleEndian);
+                $value = Instant.from-posix($ms);
+                $pos  += 8;
+            }
+            when BSON_Null {
+                $value = Any;
+            }
+            when BSON_Regex {
+                my $regex = read-cstring;
+                my $flags = read-cstring;
+                $flags ~~ /^ i? l? m? s? u? x? $/
+                    or die "Invalid or incorrectly ordered regex flags";
+                $value = ($regex, $flags);
+            }
+            when BSON_DBPointer {
+                warn-deprecated;
+                my $db = read-string;
+                my $pointer = $bson.subbuf($pos, 12);
+                $pos  += 12;
+                $value = ($db, $pointer);
+            }
+            when BSON_JavaScript {
+                $value = read-string;
+            }
+            when BSON_Symbol {
+                warn-deprecated;
+                $value = read-string;
+            }
+            when BSON_ScopedJS {
+                warn-deprecated;
+                ...
+            }
+            when BSON_int32 {
+                $value = $bson.read-int32($pos, LittleEndian);
+                $pos  += 4;
+            }
+            when BSON_Timestamp {
+                $value = $bson.read-uint64($pos, LittleEndian);
+                $pos  += 8;
+            }
+            when BSON_int64 {
+                $value = $bson.read-int64($pos, LittleEndian);
+                $pos  += 8;
+            }
+            when BSON_decimal128 {
+                ...
+            }
+        }
+
+        $key => $value
+    }
+
+    decode-document;
 }
 
 
@@ -208,6 +352,11 @@ use BSON::Simple;
 # Encode a Raku value to BSON, or vice-versa
 my $bson = bson-encode($value);
 my $val  = bson-decode($bson);
+
+# Request warnings when decoding deprecated BSON element types
+# (default is to ignore deprecations and handle all known element types)
+my $*BSON_SIMPLE_WARN_DEPRECATED = True;
+my $bad  = bson-decode($deprecated);     # Warns, but returns decoding anyway
 
 =end code
 
