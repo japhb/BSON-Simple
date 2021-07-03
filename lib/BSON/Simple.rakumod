@@ -232,13 +232,25 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
         $pos += 4;
 
         # Look for elements
-        my @pairs;
-        while $bson.read-uint8($pos++) -> $type {
-            my $pair = decode-element($type);
-            @pairs.push($pair);
+        if $as-array {
+            my @array;
+            while $bson.read-uint8($pos++) -> $type {
+                my $pair = decode-element($type);
+                # XXXX: Does not detect sparse arrays
+                # XXXX: Does not detect non-uint keys
+                @array[+$pair.key] = $pair.value;
+            }
+            @array
         }
-
-        hash(@pairs)
+        else {
+            my %hash;
+            while $bson.read-uint8($pos++) -> $type {
+                my $pair = decode-element($type);
+                # XXXX: Does not detect key collisions
+                %hash{$pair.key} = $pair.value;
+            }
+            %hash
+        }
     }
 
     my sub decode-element($type) {
