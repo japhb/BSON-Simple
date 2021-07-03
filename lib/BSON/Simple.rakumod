@@ -84,14 +84,14 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
     }
 
     # Write a document, given an iterable of key => value pairs
-    my &write-document = -> $pairs {
+    my &write-document = -> \pairs {
         # Save location of length field; we'll need to backfill it later
         my $len-pos = $pos;
         $buf.write-int32($pos, 0, LittleEndian);
         $pos += 4;
 
         # Write elements in *iteration order* (allowing arrays and ordered hashes)
-        encode-element(~.key, .value) for $pairs;
+        encode-element(~.key, .value) for pairs;
 
         # Trailing NUL byte
         $buf.write-uint8($pos++, 0);
