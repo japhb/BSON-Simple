@@ -3,7 +3,7 @@ use Test;
 
 use BSON::Simple;
 
-plan 1;
+plan 2;
 
 
 #| Round trip testing to a hex stringification of the BSON blob
@@ -56,8 +56,11 @@ multi decodes-to(Mu $value, Buf:D $bson) {
 
 
 # Adapted from https://en.wikipedia.org/wiki/BSON#Example
+# and https://www.mongodb.com/json-and-bson
 matches { hello => 'world' }, '160000000268656C6C6F0006000000776F726C640000';
 
+matches { BSON => ["awesome", 5.05e0, 1986] },
+        '310000000442534F4E002600000002300008000000617765736F6D65000131003333333333331440103200C20700000000';
 
 
 done-testing;
