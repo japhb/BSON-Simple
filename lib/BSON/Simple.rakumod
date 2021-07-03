@@ -290,7 +290,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             when BSON_Regex {
                 my $regex = read-cstring;
                 my $flags = read-cstring;
-                $flags ~~ /^ i? l? m? s? u? x? $/
+                $flags ~~ /^ g? i? l? m? s? u? x? $/
                     or die "Invalid or incorrectly ordered regex flags";
                 $value = ($regex, $flags);
             }
