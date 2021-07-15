@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 84;
+plan 86;
 
 
 # Adapted from https://en.wikipedia.org/wiki/BSON#Example
@@ -180,9 +180,8 @@ fails-decode '1300000002666F6F00040000006261720000',
 fails-decode '07000000000000',
 'Invalid BSON type low range';
 
-# XXXX: BROKEN
-# fails-decode '07000000800000',
-# 'Invalid BSON type high range';
+fails-decode '07000000800000',
+'Invalid BSON type high range';
 
 fails-decode '1200000002666F',
 'Document truncated mid-key';

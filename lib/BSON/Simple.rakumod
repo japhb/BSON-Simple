@@ -346,6 +346,9 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             when BSON_decimal128 {
                 ...
             }
+            default {
+                die "Unknown BSON type $type";
+            }
         }
 
         $key => $value
