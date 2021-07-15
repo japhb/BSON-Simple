@@ -56,3 +56,9 @@ multi decodes-to(Mu $value, Buf:D $bson) is export {
         is        $as-value, $value, "bson-decode($as-hex) produces correct value"
     }
 }
+
+
+#| Failed decode
+multi fails-decode(Str:D $bson, Str:D $error) is export {
+    dies-ok { bson-decode(hex2blob($bson)) }, "'$error' detected";
+}
