@@ -235,10 +235,9 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
         if $as-array {
             my @array;
             while $bson.read-uint8($pos++) -> $type {
+                # NOTE: Official test suite requires array keys to be *ignored*
                 my $pair = decode-element($type);
-                # XXXX: Does not detect sparse arrays
-                # XXXX: Does not detect non-uint keys
-                @array[+$pair.key] = $pair.value;
+                @array.push: $pair.value;
             }
             @array
         }
