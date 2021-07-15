@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 91;
+plan 90;
 
 
 # Adapted from https://en.wikipedia.org/wiki/BSON#Example
@@ -122,18 +122,6 @@ fails-decode '0E00000002610001000000000000', 'empty string, but extra null';
 fails-decode '0E00000002610002000000E90000', 'invalid UTF-8';
 
 
-### Special/structural values
-
-# binary
-# code
-# dbref
-# maxkey
-# minkey
-# oid
-# regex
-# timestamp
-
-
 ### Collection types
 
 # top (top-level documents)
@@ -222,33 +210,6 @@ fails-decode '140000000461000B0000001030000A0000000000',
 
 fails-decode '1A00000004666F6F00100000000230000500000062617A000000',
              'Invalid Array: bad string length in field';
-
-
-# multi-type
-
-
-### Deprecated
-
-# code_w_scope
-# dbpointer
-# multi-type-deprecated
-# symbol
-
-
-# undefined
-
-matches { a => Mu }, '0800000006610000';
-
-
-### decimal128-*
-
-# decimal128-1
-# decimal128-2
-# decimal128-3
-# decimal128-4
-# decimal128-5
-# decimal128-6
-# decimal128-7
 
 
 done-testing;

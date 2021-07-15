@@ -1,0 +1,53 @@
+use Test;
+use lib $*PROGRAM.sibling('lib');
+use CodecMatches;
+
+use BSON::Simple;
+
+
+plan 1;
+
+
+# Adapted from the official BSON test corpus at:
+# https://github.com/mongodb/specifications/tree/master/source/bson-corpus/tests
+
+
+### Special/structural values
+
+# binary
+# code
+# dbref
+# maxkey
+# minkey
+# oid
+# regex
+# timestamp
+
+# multi-type
+
+
+### Deprecated values
+
+# code_w_scope
+# dbpointer
+# multi-type-deprecated
+# symbol
+
+
+# undefined
+
+matches { a => Mu }, '0800000006610000';
+
+
+### decimal128-*
+
+# decimal128-1
+# decimal128-2
+# decimal128-3
+# decimal128-4
+# decimal128-5
+# decimal128-6
+# decimal128-7
+
+
+done-testing;
