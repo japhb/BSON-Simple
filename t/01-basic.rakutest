@@ -2,7 +2,10 @@ use Test;
 use lib $*PROGRAM.sibling('lib');
 use CodecMatches;
 
-plan 2;
+use BSON::Simple;
+
+
+plan 49;
 
 
 # Adapted from https://en.wikipedia.org/wiki/BSON#Example
@@ -11,6 +14,146 @@ matches { hello => 'world' }, '160000000268656C6C6F0006000000776F726C640000';
 
 matches { BSON => ["awesome", 5.05e0, 1986] },
         '310000000442534F4E002600000002300008000000617765736F6D65000131003333333333331440103200C20700000000';
+
+
+# Adapted from the official BSON test corpus at:
+# https://github.com/mongodb/specifications/tree/master/source/bson-corpus/tests
+
+
+# boolean
+
+matches { b => True  }, '090000000862000100';
+matches { b => False }, '090000000862000000';
+
+fails-decode '090000000862000200', 'Invalid boolean value of 2';
+fails-decode '09000000086200FF00', 'Invalid boolean value of -1';
+
+
+# code
+
+
+# datetime
+
+matches { a => DateTime.new('1970-01-01T00:00:00Z').Instant },
+        '10000000096100000000000000000000';
+
+matches { a => DateTime.new('2012-12-24T12:15:30.501Z').Instant },
+        '10000000096100C5D8D6CC3B01000000';
+
+matches { a => Instant.from-posix(-284643869.501) },
+        '10000000096100C33CE7B9BDFFFFFF00';
+
+matches { a => Instant.from-posix(253402300800) },
+        '1000000009610000DC1FD277E6000000';
+
+matches { a => DateTime.new('2012-12-24T12:15:30.001Z').Instant },
+        '10000000096100D1D6D6CC3B01000000';
+
+fails-decode '0C0000000961001234567800', 'datetime field truncated';
+
+
+# dbref
+
+
+# document
+
+matches { x => {} },             '0D000000037800050000000000';
+matches { x => { ''   => 'b'} }, '150000000378000D00000002000200000062000000';
+matches { x => {  a   => 'b'} }, '160000000378000E0000000261000200000062000000';
+matches { x => {'$a'  => 'b'} }, '170000000378000F000000022461000200000062000000';
+matches { x => {'$'   => 'a'} }, '160000000378000E0000000224000200000061000000';
+matches { x => {'a.b' => 'c'} }, '180000000378001000000002612E62000200000063000000';
+matches { x => { '.'  => 'a'} }, '160000000378000E000000022E000200000061000000';
+
+# XXXX: BROKEN
+# fails-decode '1800000003666F6F000F0000001062617200FFFFFF7F0000',
+#              'Subdocument length too long: eats outer terminator';
+
+# fails-decode '1500000003666F6F000A0000000862617200010000',
+#              'Subdocument length too short: leaks terminator';
+
+fails-decode '1C00000003666F6F001200000002626172000500000062617A000000',
+             'Invalid subdocument: bad string length in field';
+
+
+# double
+
+matches { d =>  1e0 },                '10000000016400000000000000F03F00';
+matches { d => -1e0 },                '10000000016400000000000000F0BF00';
+matches { d =>  1.0001220703125e0  }, '10000000016400000000008000F03F00';
+matches { d => -1.0001220703125e0  }, '10000000016400000000008000F0BF00';
+matches { d =>  1.2345678921232e18 }, '100000000164002a1bf5f41022b14300';
+matches { d => -1.2345678921232e18 }, '100000000164002a1bf5f41022b1c300';
+matches { d =>  0e0 },                '10000000016400000000000000000000';
+matches { d => -0e0 },                '10000000016400000000000000008000';
+matches { d =>  NaN },                '10000000016400000000000000F87F00';
+decodes-to { d =>  NaN },             '10000000016400120000000000F87F00';
+matches { d =>  Inf },                '10000000016400000000000000F07F00';
+matches { d => -Inf },                '10000000016400000000000000F0FF00';
+
+fails-decode '0B0000000164000000F03F00', 'double truncated';
+
+# Raku: Rat -> double
+encodes-to { d =>  1.0001220703125 }, '10000000016400000000008000F03F00';
+encodes-to { d => -1.0001220703125 }, '10000000016400000000008000F0BF00';
+
+
+# int32
+
+matches { i => -2147483648 }, '0C0000001069000000008000';
+matches { i =>  2147483647 }, '0C000000106900FFFFFF7F00';
+matches { i => -1 },          '0C000000106900FFFFFFFF00';
+matches { i =>  0 },          '0C0000001069000000000000';
+matches { i =>  1 },          '0C0000001069000100000000';
+
+fails-decode '090000001061000500', 'Bad int32 field length';
+
+
+# int64
+
+matches { a => -9223372036854775808 }, '10000000126100000000000000008000';
+matches { a =>  9223372036854775807 }, '10000000126100FFFFFFFFFFFFFF7F00';
+decodes-to { a => -1 },                '10000000126100FFFFFFFFFFFFFFFF00';
+decodes-to { a =>  0 },                '10000000126100000000000000000000';
+decodes-to { a =>  1 },                '10000000126100010000000000000000';
+
+fails-decode '0C0000001261001234567800', 'int64 field truncated';
+
+
+# maxkey
+# minkey
+# multi-type
+
+
+# null
+
+matches { a => Any }, '080000000A610000';
+
+
+# oid
+# regex
+# string
+# timestamp
+
+
+### Multi-value
+
+# array
+# binary
+# top
+
+
+### Deprecated
+
+# code_w_scope
+# dbpointer
+# multi-type-deprecated
+# symbol
+
+
+# undefined
+
+matches { a => Mu }, '0800000006610000';
 
 
 done-testing;
