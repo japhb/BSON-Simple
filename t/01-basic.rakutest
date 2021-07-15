@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 86;
+plan 91;
 
 
 # Adapted from https://en.wikipedia.org/wiki/BSON#Example
@@ -173,9 +173,8 @@ fails-decode '1200000002666F6F00040000006261720000DEADBEEF',
 fails-decode '1300000002666F6F00040000006261720000',
 'Stated length exceeds byte count, with valid envelope';
 
-# XXXX: BROKEN
-# fails-decode '1100000002666F6F00040000006261720000',
-# 'Stated length less than byte count, with valid envelope';
+fails-decode '1100000002666F6F00040000006261720000',
+'Stated length less than byte count, with valid envelope';
 
 fails-decode '07000000000000',
 'Invalid BSON type low range';
@@ -197,12 +196,11 @@ matches { x => {'$'   => 'a'} }, '160000000378000E0000000224000200000061000000';
 matches { x => {'a.b' => 'c'} }, '180000000378001000000002612E62000200000063000000';
 matches { x => { '.'  => 'a'} }, '160000000378000E000000022E000200000061000000';
 
-# XXXX: BROKEN
-# fails-decode '1800000003666F6F000F0000001062617200FFFFFF7F0000',
-#              'Subdocument length too long: eats outer terminator';
+fails-decode '1800000003666F6F000F0000001062617200FFFFFF7F0000',
+             'Subdocument length too long: eats outer terminator';
 
-# fails-decode '1500000003666F6F000A0000000862617200010000',
-#              'Subdocument length too short: leaks terminator';
+fails-decode '1500000003666F6F000A0000000862617200010000',
+             'Subdocument length too short: leaks terminator';
 
 fails-decode '1C00000003666F6F001200000002626172000500000062617A000000',
              'Invalid subdocument: bad string length in field';
@@ -216,12 +214,11 @@ decodes-to { a => [10] },    '130000000461000B00000010000A0000000000';
 decodes-to { a => [10] },    '150000000461000D000000106162000A0000000000';
 decodes-to { a => [10,20] }, '1b000000046100130000001030000a000000103000140000000000';
 
-# XXXX: BROKEN
-# fails-decode '140000000461000D0000001030000A0000000000',
-#              'Array length too long: eats outer terminator';
+fails-decode '140000000461000D0000001030000A0000000000',
+             'Array length too long: eats outer terminator';
 
-# fails-decode '140000000461000B0000001030000A0000000000',
-#              'Array length too short: leaks terminator';
+fails-decode '140000000461000B0000001030000A0000000000',
+             'Array length too short: leaks terminator';
 
 fails-decode '1A00000004666F6F00100000000230000500000062617A000000',
              'Invalid Array: bad string length in field';

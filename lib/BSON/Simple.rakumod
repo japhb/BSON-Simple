@@ -233,6 +233,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
 
     my sub decode-document(Bool :$as-array) {
         # Check document size isn't impossible
+        my $start = $pos;
         my $len = $bson.read-int32($pos, LittleEndian);
         die "Document too short" if $len < 5 || $pos + $len > $bson.elems;
         $pos += 4;
@@ -245,6 +246,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 my $pair = decode-element($type);
                 @array.push: $pair.value;
             }
+            die "Incorrect array length" unless $pos == $start + $len;
             @array
         }
         else {
@@ -254,6 +256,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 # XXXX: Does not detect key collisions
                 %hash{$pair.key} = $pair.value;
             }
+            die "Incorrect document length" unless $pos == $start + $len;
             %hash
         }
     }
