@@ -212,6 +212,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
         my $bytes = $bson.read-int32($pos, LittleEndian);
         $pos += 4;
         die "Invalid string length $bytes" if $bytes < 1 || $pos + $bytes > $bson.elems;
+        die "Invalid string terminator"    if $bson.read-uint8($pos + $bytes - 1) != 0;
 
         my $string = $bson.subbuf($pos, $bytes - 1).decode;
         $pos += $bytes;

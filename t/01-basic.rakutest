@@ -117,10 +117,7 @@ fails-decode '0C0000000261000000000000', 'bad string length: 0 (but no 0x00 eith
 fails-decode '0C000000026100FFFFFFFF00', 'bad string length: -1';
 fails-decode '10000000026100050000006200620000', 'bad string length: eats terminator';
 fails-decode '120000000200FFFFFF00666F6F6261720000', 'bad string length: longer than rest of document';
-
-# XXXX: BROKEN
-# fails-decode '1000000002610004000000616263FF00', 'string is not null-terminated';
-
+fails-decode '1000000002610004000000616263FF00', 'string is not null-terminated';
 fails-decode '0E00000002610001000000000000', 'empty string, but extra null';
 fails-decode '0E00000002610002000000E90000', 'invalid UTF-8';
 
