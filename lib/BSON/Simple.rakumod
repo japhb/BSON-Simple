@@ -40,6 +40,14 @@ enum BSONSubtype (
 PROCESS::<$BSON_SIMPLE_WARN_DEPRECATED> = False;
 
 
+# Special types
+my class Special {
+    has $.name is required;
+}
+constant MinKey is export = Special.new(:name('MinKey'));
+constant MaxKey is export = Special.new(:name('MaxKey'));
+
+
 # Encode a Raku data structure into BSON
 multi bson-encode(Mu $value) is export {
     bson-encode($value, my $pos = 0)
@@ -171,6 +179,19 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
             }
             when Dateish {
                 encode-element($key, .DateTime.Instant);
+            }
+            when Special {
+                when MinKey {
+                    $buf.write-uint8($pos++, BSON_MinKey);
+                    write-cstring($key);
+                }
+                when MaxKey {
+                    $buf.write-uint8($pos++, BSON_MaxKey);
+                    write-cstring($key);
+                }
+                default {
+                    die "Don't know how to encode a {$value.^name}";
+                }
             }
         }
         # Undefined values
@@ -348,6 +369,12 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             }
             when BSON_decimal128 {
                 ...
+            }
+            when BSON_MinKey {
+                $value = MinKey;
+            }
+            when BSON_MaxKey {
+                $value = MaxKey;
             }
             default {
                 die "Unknown BSON type $type";

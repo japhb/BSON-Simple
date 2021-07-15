@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 1;
+plan 3;
 
 
 # Adapted from the official BSON test corpus at:
@@ -17,11 +17,22 @@ plan 1;
 # binary
 # code
 # dbref
+
+
 # maxkey
+
+matches { a => MaxKey }, '080000007F610000';
+
+
 # minkey
+
+matches { a => MinKey }, '08000000FF610000';
+
+
 # oid
 # regex
 # timestamp
+
 
 # multi-type
 
