@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 49;
+plan 81;
 
 
 # Adapted from https://en.wikipedia.org/wiki/BSON#Example
@@ -20,6 +20,8 @@ matches { BSON => ["awesome", 5.05e0, 1986] },
 # https://github.com/mongodb/specifications/tree/master/source/bson-corpus/tests
 
 
+### Basic scalar types
+
 # boolean
 
 matches { b => True  }, '090000000862000100';
@@ -27,9 +29,6 @@ matches { b => False }, '090000000862000000';
 
 fails-decode '090000000862000200', 'Invalid boolean value of 2';
 fails-decode '09000000086200FF00', 'Invalid boolean value of -1';
-
-
-# code
 
 
 # datetime
@@ -50,30 +49,6 @@ matches { a => DateTime.new('2012-12-24T12:15:30.001Z').Instant },
         '10000000096100D1D6D6CC3B01000000';
 
 fails-decode '0C0000000961001234567800', 'datetime field truncated';
-
-
-# dbref
-
-
-# document
-
-matches { x => {} },             '0D000000037800050000000000';
-matches { x => { ''   => 'b'} }, '150000000378000D00000002000200000062000000';
-matches { x => {  a   => 'b'} }, '160000000378000E0000000261000200000062000000';
-matches { x => {'$a'  => 'b'} }, '170000000378000F000000022461000200000062000000';
-matches { x => {'$'   => 'a'} }, '160000000378000E0000000224000200000061000000';
-matches { x => {'a.b' => 'c'} }, '180000000378001000000002612E62000200000063000000';
-matches { x => { '.'  => 'a'} }, '160000000378000E000000022E000200000061000000';
-
-# XXXX: BROKEN
-# fails-decode '1800000003666F6F000F0000001062617200FFFFFF7F0000',
-#              'Subdocument length too long: eats outer terminator';
-
-# fails-decode '1500000003666F6F000A0000000862617200010000',
-#              'Subdocument length too short: leaks terminator';
-
-fails-decode '1C00000003666F6F001200000002626172000500000062617A000000',
-             'Invalid subdocument: bad string length in field';
 
 
 # double
@@ -120,27 +95,141 @@ decodes-to { a =>  1 },                '10000000126100010000000000000000';
 fails-decode '0C0000001261001234567800', 'int64 field truncated';
 
 
-# maxkey
-# minkey
-# multi-type
-
-
 # null
 
 matches { a => Any }, '080000000A610000';
 
 
+# string
+
+matches { a => '' },               '0D000000026100010000000000';
+matches { a => 'b' },              '0E00000002610002000000620000';
+matches { a => 'abababababab' },   '190000000261000D0000006162616261626162616261620000';
+matches { a => 'éééééé' },         '190000000261000D000000C3A9C3A9C3A9C3A9C3A9C3A90000';
+matches { a => '☆☆☆☆' },           '190000000261000D000000E29886E29886E29886E298860000';
+matches { a => "ab\0bab\0babab" }, '190000000261000D0000006162006261620062616261620000';
+
+my $escapes = 'ab\\"' ~ (1..31).map(&chr).join ~ 'ab';
+matches { a => $escapes },
+        '320000000261002600000061625C220102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F61620000';
+
+fails-decode '0C0000000261000000000000', 'bad string length: 0 (but no 0x00 either)';
+fails-decode '0C000000026100FFFFFFFF00', 'bad string length: -1';
+fails-decode '10000000026100050000006200620000', 'bad string length: eats terminator';
+fails-decode '120000000200FFFFFF00666F6F6261720000', 'bad string length: longer than rest of document';
+
+# XXXX: BROKEN
+# fails-decode '1000000002610004000000616263FF00', 'string is not null-terminated';
+# fails-decode '0E00000002610001000000000000', 'empty string, but extra null';
+
+fails-decode '0E00000002610002000000E90000', 'invalid UTF-8';
+
+
+### Special/structural values
+
+# binary
+# code
+# dbref
+# maxkey
+# minkey
 # oid
 # regex
-# string
 # timestamp
 
 
-### Multi-value
+### Collection types
+
+# top (top-level documents)
+
+matches { '$key' => 42  }, '0F00000010246B6579002A00000000';
+matches { '$'    => 'a' }, '0E00000002240002000000610000';
+matches { 'a.b'  => 'c' }, '1000000002612E620002000000630000';
+matches {  '.'   => 'a' }, '0E000000022E0002000000610000';
+
+fails-decode '0100000000',
+"An object size that's too small to even include the object size, but is a well-formed, empty object";
+
+fails-decode '0400000000',
+"An object size that's only enough for the object size, but is a well-formed, empty object";
+
+fails-decode '05000000',
+'One object, with length shorter than size (missing EOO)';
+
+fails-decode '0500000001',
+'One object, sized correctly, with a spot for an EOO, but the EOO is 0x01';
+
+fails-decode '05000000FF',
+'One object, sized correctly, with a spot for an EOO, but the EOO is 0xff';
+
+fails-decode '0500000070',
+'One object, sized correctly, with a spot for an EOO, but the EOO is 0x70';
+
+fails-decode '00000000000000000000',
+'Byte count is zero (with non-zero input length)';
+
+fails-decode '1200000002666F6F0004000000626172',
+'Stated length exceeds byte count, with truncated document';
+
+#  fails-decode '1200000002666F6F00040000006261720000DEADBEEF',
+# 'Stated length less than byte count, with garbage after envelope';
+
+fails-decode '1300000002666F6F00040000006261720000',
+'Stated length exceeds byte count, with valid envelope';
+
+# fails-decode '1100000002666F6F00040000006261720000',
+# 'Stated length less than byte count, with valid envelope';
+
+# fails-decode '07000000000000',
+# 'Invalid BSON type low range';
+
+# fails-decode '07000000800000',
+# 'Invalid BSON type high range';
+
+fails-decode '1200000002666F',
+'Document truncated mid-key';
+
+
+# document (subdocuments)
+
+matches { x => {} },             '0D000000037800050000000000';
+matches { x => { ''   => 'b'} }, '150000000378000D00000002000200000062000000';
+matches { x => {  a   => 'b'} }, '160000000378000E0000000261000200000062000000';
+matches { x => {'$a'  => 'b'} }, '170000000378000F000000022461000200000062000000';
+matches { x => {'$'   => 'a'} }, '160000000378000E0000000224000200000061000000';
+matches { x => {'a.b' => 'c'} }, '180000000378001000000002612E62000200000063000000';
+matches { x => { '.'  => 'a'} }, '160000000378000E000000022E000200000061000000';
+
+# XXXX: BROKEN
+# fails-decode '1800000003666F6F000F0000001062617200FFFFFF7F0000',
+#              'Subdocument length too long: eats outer terminator';
+
+# fails-decode '1500000003666F6F000A0000000862617200010000',
+#              'Subdocument length too short: leaks terminator';
+
+fails-decode '1C00000003666F6F001200000002626172000500000062617A000000',
+             'Invalid subdocument: bad string length in field';
+
 
 # array
-# binary
-# top
+
+matches { a => [] },         '0D000000046100050000000000';
+matches { a => [10] },       '140000000461000C0000001030000A0000000000';
+decodes-to { a => [10] },    '130000000461000B00000010000A0000000000';
+decodes-to { a => [10] },    '150000000461000D000000106162000A0000000000';
+decodes-to { a => [10,20] }, '1b000000046100130000001030000a000000103000140000000000';
+
+# XXXX: BROKEN
+# fails-decode '140000000461000D0000001030000A0000000000',
+#              'Array length too long: eats outer terminator';
+
+# fails-decode '140000000461000B0000001030000A0000000000',
+#              'Array length too short: leaks terminator';
+
+fails-decode '1A00000004666F6F00100000000230000500000062617A000000',
+             'Invalid Array: bad string length in field';
+
+
+# multi-type
 
 
 ### Deprecated
@@ -154,6 +243,17 @@ matches { a => Any }, '080000000A610000';
 # undefined
 
 matches { a => Mu }, '0800000006610000';
+
+
+### decimal128-*
+
+# decimal128-1
+# decimal128-2
+# decimal128-3
+# decimal128-4
+# decimal128-5
+# decimal128-6
+# decimal128-7
 
 
 done-testing;
