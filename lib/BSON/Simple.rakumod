@@ -8,7 +8,7 @@ enum BSONType (
     BSON_Array       => 4,
     BSON_Binary      => 5,
     BSON_Undefined   => 6,  # Deprecated
-    BSON_ObjectId    => 7,
+    BSON_ObjectID    => 7,
     BSON_Boolean     => 8,
     BSON_Datetime    => 9,
     BSON_Null        => 10,
@@ -41,11 +41,29 @@ PROCESS::<$BSON_SIMPLE_WARN_DEPRECATED> = False;
 
 
 # Special types
-my class Special {
+my role Special {}
+
+my class SimpleSpecial does Special {
     has $.name is required;
 }
-constant MinKey is export = Special.new(:name('MinKey'));
-constant MaxKey is export = Special.new(:name('MaxKey'));
+constant MinKey is export = SimpleSpecial.new(name => 'MinKey');
+constant MaxKey is export = SimpleSpecial.new(name => 'MaxKey');
+
+class ObjectID does Special {
+    has Blob $.id;
+
+    multi method new(Str:D $hex) {
+        self.bless(id => buf8.new($hex.comb(2).map(*.parse-base(16))));
+    }
+}
+
+class JSCode does Special {
+    has Str:D $.code is required;
+}
+
+class ScopedJS is JSCode {
+    has %.scope;
+}
 
 
 # Encode a Raku data structure into BSON
@@ -189,6 +207,34 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
                     $buf.write-uint8($pos++, BSON_MaxKey);
                     write-cstring($key);
                 }
+                when ObjectID {
+                    $buf.write-uint8($pos++, BSON_ObjectID);
+                    write-cstring($key);
+                    my $bytes = .id.elems;
+                    $buf.splice($pos, $bytes, .id);
+                    $pos += $bytes;
+                }
+                when ScopedJS {
+                    $buf.write-uint8($pos++, BSON_ScopedJS);
+                    write-cstring($key);
+
+                    # Save location of length field; we'll need to backfill it later
+                    my $len-pos = $pos;
+                    $buf.write-int32($pos, 0, LittleEndian);
+                    $pos += 4;
+
+                    write-string(.code);
+                    write-document(.scope.pairs);
+
+                    # Fix up length field (*includes* this byte count field)
+                    my $len = $pos - $len-pos;
+                    $buf.write-int32($len-pos, $len, LittleEndian);
+                }
+                when JSCode {
+                    $buf.write-uint8($pos++, BSON_JavaScript);
+                    write-cstring($key);
+                    write-string(.code);
+                }
                 default {
                     die "Don't know how to encode a {$value.^name}";
                 }
@@ -313,8 +359,8 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 warn-deprecated;
                 $value = Mu;
             }
-            when BSON_ObjectId {
-                $value = $bson.subbuf($pos, 12);
+            when BSON_ObjectID {
+                $value = ObjectID.new(id => $bson.subbuf($pos, 12));
                 $pos  += 12;
             }
             when BSON_Boolean {
@@ -345,7 +391,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 $value = ($db, $pointer);
             }
             when BSON_JavaScript {
-                $value = read-string;
+                $value = JSCode.new(code => read-string);
             }
             when BSON_Symbol {
                 warn-deprecated;
@@ -353,7 +399,16 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             }
             when BSON_ScopedJS {
                 warn-deprecated;
-                ...
+                my $len-pos = $pos;
+                my $len     = $bson.read-int32($pos, LittleEndian);
+                $pos       += 4;
+
+                my $code    = read-string;
+                my $scope   = decode-document;
+
+                die "Wrong ScopedJS length" unless $len == $pos - $len-pos;
+
+                $value = ScopedJS.new(:$code, :$scope);
             }
             when BSON_int32 {
                 $value = $bson.read-int32($pos, LittleEndian);

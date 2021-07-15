@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 3;
+plan 36;
 
 
 # Adapted from the official BSON test corpus at:
@@ -15,7 +15,53 @@ plan 3;
 ### Special/structural values
 
 # binary
+
+
 # code
+# NOTE: The original corpus tests are partially incorrect; see:
+#           https://github.com/mongodb/specifications/issues/1040
+#       The 10th hex digit of each BSON string has been changed to 'D' to fix this.
+
+matches { a => BSON::Simple::JSCode.new(code => '') },
+        '0D0000000D6100010000000000';
+
+matches { a => BSON::Simple::JSCode.new(code => 'b') },
+        '0E0000000D610002000000620000';
+
+matches { a => BSON::Simple::JSCode.new(code => 'abababababab') },
+        '190000000D61000D0000006162616261626162616261620000';
+
+matches { a => BSON::Simple::JSCode.new(code => 'éééééé') },
+        '190000000D61000D000000C3A9C3A9C3A9C3A9C3A9C3A90000';
+
+matches { a => BSON::Simple::JSCode.new(code => '☆☆☆☆') },
+        '190000000D61000D000000E29886E29886E29886E298860000';
+
+matches { a => BSON::Simple::JSCode.new(code => "ab\0bab\0babab") },
+        '190000000D61000D0000006162006261620062616261620000';
+
+fails-decode '0C0000000D61000000000000',
+             'bad code string length: 0 (but no 0x00 either)';
+
+fails-decode '0C0000000D6100FFFFFFFF00',
+             'bad code string length: -1';
+
+fails-decode '100000000D6100050000006200620000',
+             'bad code string length: eats terminator';
+
+fails-decode '120000000D00FFFFFF00666F6F6261720000',
+             'bad code string length: longer than rest of document';
+
+fails-decode '100000000D610004000000616263FF00',
+             'code string is not null-terminated';
+
+fails-decode '0E0000000D610001000000000000',
+             'empty code string, but extra null';
+
+fails-decode '0E0000000D610002000000E90000',
+             'invalid UTF-8';
+
+
 # dbref
 
 
@@ -30,6 +76,19 @@ matches { a => MinKey }, '08000000FF610000';
 
 
 # oid
+
+matches { a => BSON::Simple::ObjectID.new('000000000000000000000000') },
+        '1400000007610000000000000000000000000000';
+
+matches { a => BSON::Simple::ObjectID.new('ffffffffffffffffffffffff') },
+        '14000000076100FFFFFFFFFFFFFFFFFFFFFFFF00';
+
+matches { a => BSON::Simple::ObjectID.new('56e1fc72e0c917e9c4714161') },
+        '1400000007610056E1FC72E0C917E9C471416100';
+
+fails-decode '1200000007610056E1FC72E0C917E9C471', 'OID truncated';
+
+
 # regex
 # timestamp
 
@@ -40,6 +99,56 @@ matches { a => MinKey }, '08000000FF610000';
 ### Deprecated values
 
 # code_w_scope
+
+matches { a => BSON::Simple::ScopedJS.new(code => '', scope => {}) },
+        '160000000F61000E0000000100000000050000000000';
+
+matches { a => BSON::Simple::ScopedJS.new(code => 'abcd', scope => {}) },
+        '1A0000000F610012000000050000006162636400050000000000';
+
+matches { a => BSON::Simple::ScopedJS.new(code => '', scope => { x => 1 }) },
+        '1D0000000F61001500000001000000000C000000107800010000000000';
+
+matches { a => BSON::Simple::ScopedJS.new(code => 'abcd', scope => { x => 1 }) },
+        '210000000F6100190000000500000061626364000C000000107800010000000000';
+
+matches { a => BSON::Simple::ScopedJS.new(code => "é\0d", scope => {}) },
+        '1A0000000F61001200000005000000C3A9006400050000000000';
+
+fails-decode '280000000F6100000000000500000061626364001300000010780001000000107900010000000000',
+'field length zero';
+
+fails-decode '280000000F6100FFFFFFFF0500000061626364001300000010780001000000107900010000000000',
+'field length negative';
+
+fails-decode '160000000F61000D0000000100000000050000000000',
+'field length too short (less than minimum size)';
+
+fails-decode '280000000F61001F0000000500000061626364001300000010780001000000107900010000000000',
+'field length too short (truncates scope)';
+
+fails-decode '280000000F6100210000000500000061626364001300000010780001000000107900010000000000',
+'field length too long (clips outer doc)';
+
+fails-decode '280000000F6100FF0000000500000061626364001300000010780001000000107900010000000000',
+'field length too long (longer than outer doc)';
+
+fails-decode '280000000F6100200000000400000061626364001300000010780001000000107900010000000000',
+'bad code string: length too short';
+
+fails-decode '280000000F6100200000000600000061626364001300000010780001000000107900010000000000',
+'bad code string: length too long (clips scope)';
+
+fails-decode '280000000F610020000000FFFFFFFF61626364001300000010780001000000107900010000000000',
+'bad code string: negative length';
+
+fails-decode '280000000F610020000000FF00000061626364001300000010780001000000107900010000000000',
+'bad code string: length longer than field';
+
+fails-decode '1C0000000F001500000001000000000C000000020000000000000000',
+'bad scope doc (field has bad string length)';
+
+
 # dbpointer
 # multi-type-deprecated
 # symbol
