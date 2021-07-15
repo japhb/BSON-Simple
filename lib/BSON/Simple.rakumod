@@ -186,12 +186,17 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
 }
 
 
-# Decode a BSON document into native Raku structures
+# Decode a single BSON document into native Raku structures
 multi bson-decode(Blob:D $bson) is export {
-    bson-decode($bson, my $pos = 0)
+    my $value := bson-decode($bson, my $pos = 0);
+    if $pos < $bson.bytes {
+        die "Extra data after decoded value";
+    }
+    $value
 }
 
-# Decode a BSON document into native Raku structures, starting from buffer position $pos
+# Decode the next BSON document into native Raku structures,
+# starting from buffer position $pos
 multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
     my &read-cstring = -> {
         my $p = $pos;
@@ -364,7 +369,8 @@ use BSON::Simple;
 
 # Encode a Raku value to BSON, or vice-versa
 my $bson = bson-encode($value);
-my $val  = bson-decode($bson);
+my $val1 = bson-decode($bson);              # Dies if more data past first decoded document
+my $val2 = bson-decode($bson, my $pos = 0); # Updates $pos after decoding first document
 
 # Request warnings when decoding deprecated BSON element types
 # (default is to ignore deprecations and handle all known element types)

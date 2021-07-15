@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 81;
+plan 84;
 
 
 # Adapted from https://en.wikipedia.org/wiki/BSON#Example
@@ -120,8 +120,8 @@ fails-decode '120000000200FFFFFF00666F6F6261720000', 'bad string length: longer 
 
 # XXXX: BROKEN
 # fails-decode '1000000002610004000000616263FF00', 'string is not null-terminated';
-# fails-decode '0E00000002610001000000000000', 'empty string, but extra null';
 
+fails-decode '0E00000002610001000000000000', 'empty string, but extra null';
 fails-decode '0E00000002610002000000E90000', 'invalid UTF-8';
 
 
@@ -170,18 +170,20 @@ fails-decode '00000000000000000000',
 fails-decode '1200000002666F6F0004000000626172',
 'Stated length exceeds byte count, with truncated document';
 
-#  fails-decode '1200000002666F6F00040000006261720000DEADBEEF',
-# 'Stated length less than byte count, with garbage after envelope';
+fails-decode '1200000002666F6F00040000006261720000DEADBEEF',
+'Stated length less than byte count, with garbage after envelope';
 
 fails-decode '1300000002666F6F00040000006261720000',
 'Stated length exceeds byte count, with valid envelope';
 
+# XXXX: BROKEN
 # fails-decode '1100000002666F6F00040000006261720000',
 # 'Stated length less than byte count, with valid envelope';
 
-# fails-decode '07000000000000',
-# 'Invalid BSON type low range';
+fails-decode '07000000000000',
+'Invalid BSON type low range';
 
+# XXXX: BROKEN
 # fails-decode '07000000800000',
 # 'Invalid BSON type high range';
 
