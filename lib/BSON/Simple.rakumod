@@ -289,11 +289,13 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 $pos  += 12;
             }
             when BSON_Boolean {
-                $value = so $bson.read-uint8($pos++);
+                my $bool = $bson.read-uint8($pos++);
+                die "Invalid boolean value '$bool'" unless 0 <= $bool <= 1;
+                $value = so $bool;
             }
             when BSON_Datetime {
                 my $ms = $bson.read-int64($pos, LittleEndian);
-                $value = Instant.from-posix($ms);
+                $value = Instant.from-posix($ms / 1000);
                 $pos  += 8;
             }
             when BSON_Null {
