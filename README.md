@@ -11,7 +11,8 @@ use BSON::Simple;
 
 # Encode a Raku value to BSON, or vice-versa
 my $bson = bson-encode($value);
-my $val  = bson-decode($bson);
+my $val1 = bson-decode($bson);              # Dies if more data past first decoded document
+my $val2 = bson-decode($bson, my $pos = 0); # Updates $pos after decoding first document
 
 # Request warnings when decoding deprecated BSON element types
 # (default is to ignore deprecations and handle all known element types)
