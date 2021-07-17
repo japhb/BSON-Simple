@@ -40,6 +40,12 @@ enum BSONSubtype (
 PROCESS::<$BSON_SIMPLE_WARN_DEPRECATED> = False;
 
 
+# Simple converter utility: hex string to binary buf
+sub hex-decode(Str:D $hex, $buf-type = buf8) is export {
+    $buf-type.new($hex.comb(2).map(*.parse-base(16)))
+}
+
+
 # Special types
 my role Special {}
 
@@ -53,7 +59,7 @@ class ObjectID does Special {
     has Blob $.id;
 
     multi method new(Str:D $hex) {
-        self.bless(id => buf8.new($hex.comb(2).map(*.parse-base(16))));
+        self.bless(id => hex-decode($hex))
     }
 }
 

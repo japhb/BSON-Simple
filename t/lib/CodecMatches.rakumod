@@ -3,15 +3,9 @@ use Test;
 use BSON::Simple;
 
 
-#| Convert hex stringification to blob
-sub hex2blob(Str:D $hex) is export {
-    buf8.new($hex.comb(2).map(*.parse-base(16)))
-}
-
-
 #| Round trip testing to a hex stringification of the BSON blob
 multi matches(Mu $value, Str:D $bson) is export {
-    matches($value, hex2blob($bson))
+    matches($value, hex-decode($bson))
 }
 
 #| Round trip testing directly to a BSON blob
@@ -29,7 +23,7 @@ multi matches(Mu $value, Buf:D $bson) is export {
 
 #| Unidirectional ENcoding testing, matching a hex stringification of the expected BSON blob
 multi encodes-to(Mu $value, Str:D $bson) is export {
-    encodes-to($value, hex2blob($bson))
+    encodes-to($value, hex-decode($bson))
 }
 
 #| Unidirectional ENcoding testing, matching an expected BSON blob
@@ -41,7 +35,7 @@ multi encodes-to(Mu $value, Buf:D $bson) is export {
 
 #| Unidirectional DEcoding testing, from a hex stringification of the actual BSON blob
 multi decodes-to(Mu $value, Str:D $bson) is export {
-    decodes-to($value, hex2blob($bson))
+    decodes-to($value, hex-decode($bson))
 }
 
 #| Unidirectional DEcoding testing, from an actual BSON blob
@@ -60,5 +54,5 @@ multi decodes-to(Mu $value, Buf:D $bson) is export {
 
 #| Failed decode
 multi fails-decode(Str:D $bson, Str:D $error) is export {
-    dies-ok { bson-decode(hex2blob($bson)) }, "'$error' detected";
+    dies-ok { bson-decode(hex-decode($bson)) }, "'$error' detected";
 }
