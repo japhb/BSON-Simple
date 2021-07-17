@@ -74,6 +74,19 @@ class ScopedJS is JSCode {
     has %.scope;
 }
 
+class Binary does Special {
+    has uint8 $.subtype;
+    has Blob  $.content;
+
+    multi method new(Int:D $subtype, Str:D :$hex) {
+        self.bless(:$subtype, content => hex-decode($hex))
+    }
+
+    multi method new(Int:D $subtype, Str:D :$base64) {
+        self.bless(:$subtype, content => base64-decode($base64))
+    }
+}
+
 
 # Encode a Raku data structure into BSON
 multi bson-encode(Mu $value) is export {
@@ -109,10 +122,19 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
     # Write a (possibly subtyped) binary blob
     my &write-binary = -> $blob, $subtype = BSON_Generic {
         my $bytes = $blob.elems;
-        $buf.write-int32($pos, $bytes, LittleEndian);
-        $pos += 4;
 
-        $buf.write-uint8($pos++, $subtype);
+        if $subtype == BSON_Binary_Old {
+            $buf.write-int32($pos, $bytes + 4, LittleEndian);
+            $pos += 4;
+            $buf.write-uint8($pos++, $subtype);
+            $buf.write-int32($pos, $bytes, LittleEndian);
+            $pos += 4;
+        }
+        else {
+            $buf.write-int32($pos, $bytes, LittleEndian);
+            $pos += 4;
+            $buf.write-uint8($pos++, $subtype);
+        }
 
         $buf.splice($pos, $bytes, $blob);
         $pos += $bytes;
@@ -244,6 +266,11 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
                     write-cstring($key);
                     write-string(.code);
                 }
+                when Binary {
+                    $buf.write-uint8($pos++, BSON_Binary);
+                    write-cstring($key);
+                    write-binary(.content, .subtype);
+                }
                 default {
                     die "Don't know how to encode a {$value.^name}";
                 }
@@ -300,6 +327,13 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
         my $bytes = $bson.read-int32($pos, LittleEndian);
         $pos += 4;
         my $subtype = $bson.read-uint8($pos++);
+
+        if $subtype == BSON_Binary_Old {
+            my $orig = $bytes;
+            $bytes = $bson.read-int32($pos, LittleEndian);
+            $pos += 4;
+            die "Mismatch in old binary sizes" unless $bytes == $orig - 4;
+        }
 
         my $blob = $bson.subbuf($pos, $bytes);
         $pos += $bytes;
@@ -361,8 +395,8 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 $value = decode-document :as-array;
             }
             when BSON_Binary {
-                my ($subtype, $blob) = read-binary;
-                $value = $blob;
+                my ($subtype, $content) = read-binary;
+                $value = Binary.new(:$subtype, :$content);
             }
             when BSON_Undefined {
                 warn-deprecated;

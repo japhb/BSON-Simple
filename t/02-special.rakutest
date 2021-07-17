@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 36;
+plan 53;
 
 
 # Adapted from the official BSON test corpus at:
@@ -15,6 +15,57 @@ plan 36;
 ### Special/structural values
 
 # binary
+
+matches { x => BSON::Simple::Binary.new(0, :hex('')) },
+        '0D000000057800000000000000';
+
+matches { x => BSON::Simple::Binary.new(0, :base64('')) },
+        '0D000000057800000000000000';
+
+matches { x => BSON::Simple::Binary.new(0, :hex('FFFF')) },
+        '0F0000000578000200000000FFFF00';
+
+matches { x => BSON::Simple::Binary.new(0, :base64('//8=')) },
+        '0F0000000578000200000000FFFF00';
+
+matches { x => BSON::Simple::Binary.new(1, :base64('//8=')) },
+        '0F0000000578000200000001FFFF00';
+
+matches { x => BSON::Simple::Binary.new(2, :base64('//8=')) },
+        '13000000057800060000000202000000FFFF00';
+
+matches { x => BSON::Simple::Binary.new(3, :base64('c//SZESzTGmQ6OfR38A11A==')) },
+        '1D000000057800100000000373FFD26444B34C6990E8E7D1DFC035D400';
+
+matches { x => BSON::Simple::Binary.new(4, :base64('c//SZESzTGmQ6OfR38A11A==')) },
+        '1D000000057800100000000473FFD26444B34C6990E8E7D1DFC035D400';
+
+matches { x => BSON::Simple::Binary.new(5, :base64('c//SZESzTGmQ6OfR38A11A==')) },
+        '1D000000057800100000000573FFD26444B34C6990E8E7D1DFC035D400';
+
+matches { x => BSON::Simple::Binary.new(0x80, :base64('//8=')) },
+        '0F0000000578000200000080FFFF00';
+
+matches { x => { '$type' => 'string' } },
+        '1F000000037800170000000224747970650007000000737472696E67000000';
+
+matches { x => { '$type' => 2 } },
+        '180000000378001000000010247479706500020000000000';
+
+fails-decode '1D000000057800FF0000000573FFD26444B34C6990E8E7D1DFC035D400',
+             'Length longer than document';
+
+fails-decode '0D000000057800FFFFFFFF0000',
+             'Negative length';
+
+fails-decode '13000000057800060000000203000000FFFF00',
+             'subtype 0x02 length too long';
+
+fails-decode '13000000057800060000000201000000FFFF00',
+             'subtype 0x02 length too short';
+
+fails-decode '130000000578000600000002FFFFFFFFFFFF00',
+             'subtype 0x02 length negative one';
 
 
 # code
