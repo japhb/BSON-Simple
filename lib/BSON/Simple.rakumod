@@ -1,6 +1,9 @@
 unit module BSON::Simple:auth<zef:japhb>:api<0>:ver<0.0.1>;
 
 
+use Base64::Native;
+
+
 enum BSONType (
     BSON_Double      => 1,
     BSON_String      => 2,
