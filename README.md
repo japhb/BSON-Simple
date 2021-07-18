@@ -25,7 +25,7 @@ DESCRIPTION
 
 BSON::Simple is a trivial implementation of the core functionality of the [BSON serialization format](https://bsonspec.org/), used as the primary data format of the [MongoDB document-oriented database](https://en.wikipedia.org/wiki/MongoDB).
 
-Note that because it is important to retain key order, BSON maps are decoded as ordered hashes using the XXXX module.
+Note that because it is important to retain key order, BSON maps are decoded as ordered hashes using the Hash::Ordered module.
 
 RELATED
 =======

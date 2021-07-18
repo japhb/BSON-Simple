@@ -6,7 +6,8 @@
   "build-depends": [
   ],
   "depends": [
-    "Base64::Native"
+    "Base64::Native",
+    "Hash::Ordered"
   ],
   "description": "Simple codec for the BSON (Binary JSON) serialization format",
   "license": "Artistic-2.0",

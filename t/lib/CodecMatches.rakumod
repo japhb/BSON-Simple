@@ -1,7 +1,11 @@
 use v6.d;
 use Test;
+use Hash::Ordered;
 use BSON::Simple;
 
+
+#| Clarify testing that documents become ordered hashes
+sub circumfix:<⦃ ⦄>(|c) is export { Hash::Ordered.new(|c) }
 
 #| Round trip testing to a hex stringification of the BSON blob
 multi matches(Mu $value, Str:D $bson) is export {

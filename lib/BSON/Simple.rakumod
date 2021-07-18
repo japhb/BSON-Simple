@@ -2,6 +2,7 @@ unit module BSON::Simple:auth<zef:japhb>:api<0>:ver<0.0.1>;
 
 
 use Base64::Native;
+use Hash::Ordered;
 
 
 enum BSONType (
@@ -520,7 +521,7 @@ used as the primary data format of the
 L<MongoDB document-oriented database|https://en.wikipedia.org/wiki/MongoDB>.
 
 Note that because it is important to retain key order, BSON maps are decoded
-as ordered hashes using the XXXX module.
+as ordered hashes using the Hash::Ordered module.
 
 
 =head1 RELATED
