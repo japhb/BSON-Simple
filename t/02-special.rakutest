@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 53;
+plan 62;
 
 
 # Adapted from the official BSON test corpus at:
@@ -16,40 +16,40 @@ plan 53;
 
 # binary
 
-matches { x => BSON::Simple::Binary.new(0, :hex('')) },
+matches ⦃ x => BSON::Simple::Binary.new(0, :hex('')) ⦄,
         '0D000000057800000000000000';
 
-matches { x => BSON::Simple::Binary.new(0, :base64('')) },
+matches ⦃ x => BSON::Simple::Binary.new(0, :base64('')) ⦄,
         '0D000000057800000000000000';
 
-matches { x => BSON::Simple::Binary.new(0, :hex('FFFF')) },
+matches ⦃ x => BSON::Simple::Binary.new(0, :hex('FFFF')) ⦄,
         '0F0000000578000200000000FFFF00';
 
-matches { x => BSON::Simple::Binary.new(0, :base64('//8=')) },
+matches ⦃ x => BSON::Simple::Binary.new(0, :base64('//8=')) ⦄,
         '0F0000000578000200000000FFFF00';
 
-matches { x => BSON::Simple::Binary.new(1, :base64('//8=')) },
+matches ⦃ x => BSON::Simple::Binary.new(1, :base64('//8=')) ⦄,
         '0F0000000578000200000001FFFF00';
 
-matches { x => BSON::Simple::Binary.new(2, :base64('//8=')) },
+matches ⦃ x => BSON::Simple::Binary.new(2, :base64('//8=')) ⦄,
         '13000000057800060000000202000000FFFF00';
 
-matches { x => BSON::Simple::Binary.new(3, :base64('c//SZESzTGmQ6OfR38A11A==')) },
+matches ⦃ x => BSON::Simple::Binary.new(3, :base64('c//SZESzTGmQ6OfR38A11A==')) ⦄,
         '1D000000057800100000000373FFD26444B34C6990E8E7D1DFC035D400';
 
-matches { x => BSON::Simple::Binary.new(4, :base64('c//SZESzTGmQ6OfR38A11A==')) },
+matches ⦃ x => BSON::Simple::Binary.new(4, :base64('c//SZESzTGmQ6OfR38A11A==')) ⦄,
         '1D000000057800100000000473FFD26444B34C6990E8E7D1DFC035D400';
 
-matches { x => BSON::Simple::Binary.new(5, :base64('c//SZESzTGmQ6OfR38A11A==')) },
+matches ⦃ x => BSON::Simple::Binary.new(5, :base64('c//SZESzTGmQ6OfR38A11A==')) ⦄,
         '1D000000057800100000000573FFD26444B34C6990E8E7D1DFC035D400';
 
-matches { x => BSON::Simple::Binary.new(0x80, :base64('//8=')) },
+matches ⦃ x => BSON::Simple::Binary.new(0x80, :base64('//8=')) ⦄,
         '0F0000000578000200000080FFFF00';
 
-matches { x => { '$type' => 'string' } },
+matches ⦃ x => ⦃ '$type' => 'string' ⦄ ⦄,
         '1F000000037800170000000224747970650007000000737472696E67000000';
 
-matches { x => { '$type' => 2 } },
+matches ⦃ x => ⦃ '$type' => 2 ⦄ ⦄,
         '180000000378001000000010247479706500020000000000';
 
 fails-decode '1D000000057800FF0000000573FFD26444B34C6990E8E7D1DFC035D400',
@@ -73,22 +73,22 @@ fails-decode '130000000578000600000002FFFFFFFFFFFF00',
 #           https://github.com/mongodb/specifications/issues/1040
 #       The 10th hex digit of each BSON string has been changed to 'D' to fix this.
 
-matches { a => BSON::Simple::JSCode.new(code => '') },
+matches ⦃ a => BSON::Simple::JSCode.new(code => '') ⦄,
         '0D0000000D6100010000000000';
 
-matches { a => BSON::Simple::JSCode.new(code => 'b') },
+matches ⦃ a => BSON::Simple::JSCode.new(code => 'b') ⦄,
         '0E0000000D610002000000620000';
 
-matches { a => BSON::Simple::JSCode.new(code => 'abababababab') },
+matches ⦃ a => BSON::Simple::JSCode.new(code => 'abababababab') ⦄,
         '190000000D61000D0000006162616261626162616261620000';
 
-matches { a => BSON::Simple::JSCode.new(code => 'éééééé') },
+matches ⦃ a => BSON::Simple::JSCode.new(code => 'éééééé') ⦄,
         '190000000D61000D000000C3A9C3A9C3A9C3A9C3A9C3A90000';
 
-matches { a => BSON::Simple::JSCode.new(code => '☆☆☆☆') },
+matches ⦃ a => BSON::Simple::JSCode.new(code => '☆☆☆☆') ⦄,
         '190000000D61000D000000E29886E29886E29886E298860000';
 
-matches { a => BSON::Simple::JSCode.new(code => "ab\0bab\0babab") },
+matches ⦃ a => BSON::Simple::JSCode.new(code => "ab\0bab\0babab") ⦄,
         '190000000D61000D0000006162006261620062616261620000';
 
 fails-decode '0C0000000D61000000000000',
@@ -115,26 +115,53 @@ fails-decode '0E0000000D610002000000E90000',
 
 # dbref
 
+matches ⦃ dbref => ⦃ '$ref' => 'collection', '$id' => BSON::Simple::ObjectID.new('58921b3e6e32ab156a22b59e') ⦄ ⦄,
+        '37000000036462726566002b0000000224726566000b000000636f6c6c656374696f6e00072469640058921b3e6e32ab156a22b59e0000';
+
+matches ⦃ dbref => ⦃ '$ref' => 'collection', '$id' => BSON::Simple::ObjectID.new('58921b3e6e32ab156a22b59e'), '$db' => 'db' ⦄ ⦄,
+        '4300000003646272656600370000000224726566000b000000636f6c6c656374696f6e00072469640058921b3e6e32ab156a22b59e0224646200030000006462000000';
+
+matches ⦃ dbref => ⦃ '$ref' => 'collection', '$id' => 42, '$db' => 'db', foo => 'bar' ⦄ ⦄,
+        '48000000036462726566003c0000000224726566000b000000636f6c6c656374696f6e0010246964002a00000002246462000300000064620002666f6f0004000000626172000000';
+
+matches ⦃ dbref => ⦃ '$ref' => 'collection', '$id' => BSON::Simple::ObjectID.new('58921b3e6e32ab156a22b59e'), foo => 'bar' ⦄ ⦄,
+        '4400000003646272656600380000000224726566000b000000636f6c6c656374696f6e00072469640058921b3e6e32ab156a22b59e02666f6f0004000000626172000000';
+
+matches ⦃ '$ref' => 'not-a-dbref', '$id' => BSON::Simple::ObjectID.new('58921b3e6e32ab156a22b59e'), '$banana' => 'peel' ⦄,
+        '3e0000000224726566000c0000006e6f742d612d646272656600072469640058921b3e6e32ab156a22b59e022462616e616e6100050000007065656c0000';
+
+matches ⦃ dbref => ⦃ '$ref' => 'collection', '$id' => BSON::Simple::ObjectID.new('58921b3e6e32ab156a22b59e'), 'a.b' => 1, '$c' => 1 ⦄ ⦄,
+        '48000000036462726566003c0000000224726566000b000000636f6c6c656374696f6e00072469640058921b3e6e32ab156a22b59e10612e62000100000010246300010000000000';
+
+matches ⦃ dbref => ⦃ '$ref' => 'collection' ⦄ ⦄,
+        '26000000036462726566001a0000000224726566000b000000636f6c6c656374696f6e000000';
+
+matches ⦃ dbref => ⦃ '$ref' => 1, '$id' => BSON::Simple::ObjectID.new('58921b3e6e32ab156a22b59e') ⦄ ⦄,
+        '2c000000036462726566002000000010247265660001000000072469640058921b3e6e32ab156a22b59e0000';
+
+matches ⦃ dbref => ⦃ '$ref' => 'collection', '$id' => BSON::Simple::ObjectID.new('58921b3e6e32ab156a22b59e'), '$db' => 1 ⦄ ⦄,
+        '4000000003646272656600340000000224726566000b000000636f6c6c656374696f6e00072469640058921b3e6e32ab156a22b59e1024646200010000000000';
+
 
 # maxkey
 
-matches { a => MaxKey }, '080000007F610000';
+matches ⦃ a => MaxKey ⦄, '080000007F610000';
 
 
 # minkey
 
-matches { a => MinKey }, '08000000FF610000';
+matches ⦃ a => MinKey ⦄, '08000000FF610000';
 
 
 # oid
 
-matches { a => BSON::Simple::ObjectID.new('000000000000000000000000') },
+matches ⦃ a => BSON::Simple::ObjectID.new('000000000000000000000000') ⦄,
         '1400000007610000000000000000000000000000';
 
-matches { a => BSON::Simple::ObjectID.new('ffffffffffffffffffffffff') },
+matches ⦃ a => BSON::Simple::ObjectID.new('ffffffffffffffffffffffff') ⦄,
         '14000000076100FFFFFFFFFFFFFFFFFFFFFFFF00';
 
-matches { a => BSON::Simple::ObjectID.new('56e1fc72e0c917e9c4714161') },
+matches ⦃ a => BSON::Simple::ObjectID.new('56e1fc72e0c917e9c4714161') ⦄,
         '1400000007610056E1FC72E0C917E9C471416100';
 
 fails-decode '1200000007610056E1FC72E0C917E9C471', 'OID truncated';
@@ -151,19 +178,19 @@ fails-decode '1200000007610056E1FC72E0C917E9C471', 'OID truncated';
 
 # code_w_scope
 
-matches { a => BSON::Simple::ScopedJS.new(code => '', scope => {}) },
+matches ⦃ a => BSON::Simple::ScopedJS.new(code => '', scope => {}) ⦄,
         '160000000F61000E0000000100000000050000000000';
 
-matches { a => BSON::Simple::ScopedJS.new(code => 'abcd', scope => {}) },
+matches ⦃ a => BSON::Simple::ScopedJS.new(code => 'abcd', scope => {}) ⦄,
         '1A0000000F610012000000050000006162636400050000000000';
 
-matches { a => BSON::Simple::ScopedJS.new(code => '', scope => { x => 1 }) },
+matches ⦃ a => BSON::Simple::ScopedJS.new(code => '', scope => { x => 1 }) ⦄,
         '1D0000000F61001500000001000000000C000000107800010000000000';
 
-matches { a => BSON::Simple::ScopedJS.new(code => 'abcd', scope => { x => 1 }) },
+matches ⦃ a => BSON::Simple::ScopedJS.new(code => 'abcd', scope => { x => 1 }) ⦄,
         '210000000F6100190000000500000061626364000C000000107800010000000000';
 
-matches { a => BSON::Simple::ScopedJS.new(code => "é\0d", scope => {}) },
+matches ⦃ a => BSON::Simple::ScopedJS.new(code => "é\0d", scope => {}) ⦄,
         '1A0000000F61001200000005000000C3A9006400050000000000';
 
 fails-decode '280000000F6100000000000500000061626364001300000010780001000000107900010000000000',
@@ -207,7 +234,7 @@ fails-decode '1C0000000F001500000001000000000C000000020000000000000000',
 
 # undefined
 
-matches { a => Mu }, '0800000006610000';
+matches ⦃ a => Mu ⦄, '0800000006610000';
 
 
 ### decimal128-*

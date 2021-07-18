@@ -361,7 +361,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             @array
         }
         else {
-            my %hash;
+            my %hash is Hash::Ordered;
             while $bson.read-uint8($pos++) -> $type {
                 my $pair = decode-element($type);
                 # XXXX: Does not detect key collisions
