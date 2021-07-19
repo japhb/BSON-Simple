@@ -1,3 +1,5 @@
+[![Actions Status](https://github.com/japhb/BSON-Simple/workflows/test/badge.svg)](https://github.com/japhb/BSON-Simple/actions)
+
 NAME
 ====
 
