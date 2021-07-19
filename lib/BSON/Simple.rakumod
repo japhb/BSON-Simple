@@ -98,8 +98,9 @@ class PCRE_Regex does Special {
     has Str:D $.options is required;
 }
 
-class Int32 is Int does Special { }
-class Int64 is Int does Special { }
+class Int32  is Int does Special { }
+class Int64  is Int does Special { }
+class Symbol is Str does Special { }
 
 class DBPointer does Special {
     has Str:D      $.ref is required;
@@ -235,6 +236,11 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
                 }
             }
             when Stringy {
+                when Symbol {
+                    $buf.write-uint8($pos++, BSON_Symbol);
+                    write-cstring($key);
+                    write-string($_);
+                }
                 when Str {
                     $buf.write-uint8($pos++, BSON_String);
                     write-cstring($key);
@@ -492,7 +498,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             }
             when BSON_Symbol {
                 warn-deprecated;
-                $value = read-string;
+                $value = Symbol(read-string);
             }
             when BSON_ScopedJS {
                 warn-deprecated;

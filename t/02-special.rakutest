@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 87;
+plan 100;
 
 
 # Adapted from the official BSON test corpus at:
@@ -300,6 +300,45 @@ fails-decode '1A0000000C610002000000E90056E1FC72E0C917E9C471416100',
 
 
 # symbol
+
+matches ⦃ a => BSON::Simple::Symbol('') ⦄,
+        '0D0000000E6100010000000000';
+
+matches ⦃ a => BSON::Simple::Symbol('b') ⦄,
+        '0E0000000E610002000000620000';
+
+matches ⦃ a => BSON::Simple::Symbol('abababababab') ⦄,
+        '190000000E61000D0000006162616261626162616261620000';
+
+matches ⦃ a => BSON::Simple::Symbol('éééééé') ⦄,
+        '190000000E61000D000000C3A9C3A9C3A9C3A9C3A9C3A90000';
+
+matches ⦃ a => BSON::Simple::Symbol('☆☆☆☆') ⦄,
+        '190000000E61000D000000E29886E29886E29886E298860000';
+
+matches ⦃ a => BSON::Simple::Symbol("ab\0bab\0babab") ⦄,
+        '190000000E61000D0000006162006261620062616261620000';
+
+fails-decode '0C0000000E61000000000000',
+             'bad symbol length: 0 (but no 0x00 either)';
+
+fails-decode '0C0000000E6100FFFFFFFF00',
+             'bad symbol length: -1';
+
+fails-decode '100000000E6100050000006200620000',
+             'bad symbol length: eats terminator';
+
+fails-decode '120000000E00FFFFFF00666F6F6261720000',
+             'bad symbol length: longer than rest of document';
+
+fails-decode '100000000E610004000000616263FF00',
+             'symbol is not null-terminated';
+
+fails-decode '0E0000000E610001000000000000',
+             'empty symbol, but extra null';
+
+fails-decode '0E0000000E610002000000E90000',
+             'invalid UTF-8';
 
 
 # undefined
