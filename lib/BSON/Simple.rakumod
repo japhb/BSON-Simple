@@ -98,6 +98,9 @@ class PCRE_Regex does Special {
     has Str:D $.options is required;
 }
 
+class Int32 is Int does Special { }
+class Int64 is Int does Special { }
+
 
 # Encode a Raku data structure into BSON
 multi bson-encode(Mu $value) is export {
@@ -179,17 +182,31 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
                     $buf.write-uint8($pos++, +$_);
                 }
                 when Int {
-                    if -2147483648 <= $_ <= 2147483647 {
+                    when Int32 {
                         $buf.write-uint8($pos++, BSON_int32);
                         write-cstring($key);
                         $buf.write-int32($pos, $_, LittleEndian);
                         $pos += 4;
                     }
-                    else {
+                    when Int64 {
                         $buf.write-uint8($pos++, BSON_int64);
                         write-cstring($key);
                         $buf.write-int64($pos, $_, LittleEndian);
                         $pos += 8;
+                    }
+                    default {
+                        if -2147483648 <= $_ <= 2147483647 {
+                            $buf.write-uint8($pos++, BSON_int32);
+                            write-cstring($key);
+                            $buf.write-int32($pos, $_, LittleEndian);
+                            $pos += 4;
+                        }
+                        else {
+                            $buf.write-uint8($pos++, BSON_int64);
+                            write-cstring($key);
+                            $buf.write-int64($pos, $_, LittleEndian);
+                            $pos += 8;
+                        }
                     }
                 }
                 when Num {
@@ -489,7 +506,7 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 $value = Timestamp.new(:$i, :$t);
             }
             when BSON_int64 {
-                $value = $bson.read-int64($pos, LittleEndian);
+                $value = Int64.new($bson.read-int64($pos, LittleEndian));
                 $pos  += 8;
             }
             when BSON_decimal128 {

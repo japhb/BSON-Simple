@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 90;
+plan 92;
 
 
 # Adapted from https://en.wikipedia.org/wiki/BSON#Example
@@ -86,11 +86,23 @@ fails-decode '090000001061000500', 'Bad int32 field length';
 
 # int64
 
-matches ⦃ a => -9223372036854775808 ⦄, '10000000126100000000000000008000';
-matches ⦃ a =>  9223372036854775807 ⦄, '10000000126100FFFFFFFFFFFFFF7F00';
-decodes-to ⦃ a => -1 ⦄,                '10000000126100FFFFFFFFFFFFFFFF00';
-decodes-to ⦃ a =>  0 ⦄,                '10000000126100000000000000000000';
-decodes-to ⦃ a =>  1 ⦄,                '10000000126100010000000000000000';
+encodes-to ⦃ a => -9223372036854775808 ⦄, '10000000126100000000000000008000';
+encodes-to ⦃ a =>  9223372036854775807 ⦄, '10000000126100FFFFFFFFFFFFFF7F00';
+
+matches ⦃ a => BSON::Simple::Int64.new(-9223372036854775808) ⦄,
+        '10000000126100000000000000008000';
+
+matches ⦃ a => BSON::Simple::Int64.new( 9223372036854775807) ⦄,
+        '10000000126100FFFFFFFFFFFFFF7F00';
+
+matches ⦃ a => BSON::Simple::Int64.new(-1) ⦄,
+        '10000000126100FFFFFFFFFFFFFFFF00';
+
+matches ⦃ a => BSON::Simple::Int64.new( 0) ⦄,
+        '10000000126100000000000000000000';
+
+matches ⦃ a => BSON::Simple::Int64.new( 1) ⦄,
+        '10000000126100010000000000000000';
 
 fails-decode '0C0000001261001234567800', 'int64 field truncated';
 
