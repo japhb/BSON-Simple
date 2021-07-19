@@ -88,6 +88,11 @@ class Binary does Special {
     }
 }
 
+class Timestamp does Special {
+    has uint32 $.i;
+    has uint32 $.t;
+}
+
 
 # Encode a Raku data structure into BSON
 multi bson-encode(Mu $value) is export {
@@ -271,6 +276,14 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
                     $buf.write-uint8($pos++, BSON_Binary);
                     write-cstring($key);
                     write-binary(.content, .subtype);
+                }
+                when Timestamp {
+                    $buf.write-uint8($pos++, BSON_Timestamp);
+                    write-cstring($key);
+                    $buf.write-uint32($pos, .i, LittleEndian);
+                    $pos += 4;
+                    $buf.write-uint32($pos, .t, LittleEndian);
+                    $pos += 4;
                 }
                 default {
                     die "Don't know how to encode a {$value.^name}";
@@ -459,8 +472,11 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 $pos  += 4;
             }
             when BSON_Timestamp {
-                $value = $bson.read-uint64($pos, LittleEndian);
-                $pos  += 8;
+                my $i  = $bson.read-uint32($pos, LittleEndian);
+                $pos  += 4;
+                my $t  = $bson.read-uint32($pos, LittleEndian);
+                $pos  += 4;
+                $value = Timestamp.new(:$i, :$t);
             }
             when BSON_int64 {
                 $value = $bson.read-int64($pos, LittleEndian);

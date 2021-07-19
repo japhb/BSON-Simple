@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 62;
+plan 66;
 
 
 # Adapted from the official BSON test corpus at:
@@ -168,10 +168,20 @@ fails-decode '1200000007610056E1FC72E0C917E9C471', 'OID truncated';
 
 
 # regex
+
+
 # timestamp
 
+matches ⦃ a => BSON::Simple::Timestamp.new(t => 123456789, i => 42) ⦄,
+        '100000001161002A00000015CD5B0700';
 
-# multi-type
+matches ⦃ a => BSON::Simple::Timestamp.new(t => 4294967295, i => 4294967295) ⦄,
+        '10000000116100FFFFFFFFFFFFFFFF00';
+
+matches ⦃ a => BSON::Simple::Timestamp.new(t => 4000000000, i => 4000000000) ⦄,
+        '1000000011610000286BEE00286BEE00';
+
+fails-decode '0f0000001161002A00000015CD5B00', 'Truncated timestamp field';
 
 
 ### Deprecated values
@@ -228,7 +238,8 @@ fails-decode '1C0000000F001500000001000000000C000000020000000000000000',
 
 
 # dbpointer
-# multi-type-deprecated
+
+
 # symbol
 
 
