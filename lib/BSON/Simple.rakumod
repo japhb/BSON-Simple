@@ -101,6 +101,11 @@ class PCRE_Regex does Special {
 class Int32 is Int does Special { }
 class Int64 is Int does Special { }
 
+class DBPointer does Special {
+    has Str:D      $.ref is required;
+    has ObjectID:D $.oid is required;
+}
+
 
 # Encode a Raku data structure into BSON
 multi bson-encode(Mu $value) is export {
@@ -313,6 +318,14 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
                     write-cstring(.pattern);
                     write-cstring(.options.comb.sort.join);
                 }
+                when DBPointer {
+                    $buf.write-uint8($pos++, BSON_DBPointer);
+                    write-cstring($key);
+                    write-string(.ref);
+                    my $bytes = .oid.id.elems;
+                    $buf.splice($pos, $bytes, .oid.id);
+                    $pos += $bytes;
+                }
                 default {
                     die "Don't know how to encode a {$value.^name}";
                 }
@@ -469,10 +482,10 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             }
             when BSON_DBPointer {
                 warn-deprecated;
-                my $db = read-string;
-                my $pointer = $bson.subbuf($pos, 12);
+                my $ref = read-string;
+                my $oid = ObjectID.new(:id($bson.subbuf($pos, 12)));
                 $pos  += 12;
-                $value = ($db, $pointer);
+                $value = DBPointer.new(:$ref, :$oid);
             }
             when BSON_JavaScript {
                 $value = JSCode.new(code => read-string);

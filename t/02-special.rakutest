@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 79;
+plan 87;
 
 
 # Adapted from the official BSON test corpus at:
@@ -272,6 +272,31 @@ fails-decode '1C0000000F001500000001000000000C000000020000000000000000',
 
 
 # dbpointer
+
+my $oid = BSON::Simple::ObjectID.new('56e1fc72e0c917e9c4714161');
+matches ⦃ a => BSON::Simple::DBPointer.new(ref => 'b', :$oid) ⦄,
+        '1A0000000C610002000000620056E1FC72E0C917E9C471416100';
+
+matches ⦃ a => BSON::Simple::DBPointer.new(ref => 'é', :$oid) ⦄,
+        '1B0000000C610003000000C3A90056E1FC72E0C917E9C471416100';
+
+fails-decode '1A0000000C6100FFFFFFFF620056E1FC72E0C917E9C471416100',
+             'String with negative length';
+
+fails-decode '1A0000000C610000000000620056E1FC72E0C917E9C471416100',
+             'String with zero length';
+
+fails-decode '1A0000000C610002000000626256E1FC72E0C917E9C471416100',
+             'String not null terminated';
+
+fails-decode '160000000C61000300000061620056E1FC72E0C91700',
+             'short OID (less than minimum length for field)';
+
+fails-decode '1A0000000C61000300000061620056E1FC72E0C917E9C4716100',
+             'short OID (greater than minimum, but truncated)';
+
+fails-decode '1A0000000C610002000000E90056E1FC72E0C917E9C471416100',
+             'String with bad UTF-8';
 
 
 # symbol
