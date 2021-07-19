@@ -582,8 +582,15 @@ L<BSON serialization format|https://bsonspec.org/>,
 used as the primary data format of the
 L<MongoDB document-oriented database|https://en.wikipedia.org/wiki/MongoDB>.
 
-Note that because it is important to retain key order, BSON maps are decoded
-as ordered hashes using the Hash::Ordered module.
+Note that because it is important to retain key order, BSON maps are decoded as
+ordered hashes using the Hash::Ordered module.  Likewise, several BSON types
+that must maintain a distinction from Raku's standard types are decoded into
+objects that do the BSON::Simple::Special role.
+
+
+=head1 CAVEATS
+
+=item Does not support the Decimal128 type yet
 
 
 =head1 RELATED
