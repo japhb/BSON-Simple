@@ -5,7 +5,7 @@ use CodecMatches;
 use BSON::Simple;
 
 
-plan 66;
+plan 78;
 
 
 # Adapted from the official BSON test corpus at:
@@ -168,6 +168,40 @@ fails-decode '1200000007610056E1FC72E0C917E9C471', 'OID truncated';
 
 
 # regex
+
+matches ⦃ a => BSON::Simple::PCRE_Regex.new(pattern => '', options => '') ⦄,
+        '0A0000000B6100000000';
+
+matches ⦃ a => BSON::Simple::PCRE_Regex.new(pattern => 'abc', options => '') ⦄,
+        '0D0000000B6100616263000000';
+
+matches ⦃ a => BSON::Simple::PCRE_Regex.new(pattern => 'abc', options => 'im') ⦄,
+        '0F0000000B610061626300696D0000';
+
+matches ⦃ a => BSON::Simple::PCRE_Regex.new(pattern => 'ab/cd', options => 'im') ⦄,
+        '110000000B610061622F636400696D0000';
+
+matches ⦃ a => BSON::Simple::PCRE_Regex.new(pattern => 'abc', options => 'imx') ⦄,
+        '100000000B610061626300696D780000';
+
+encodes-to ⦃ a => BSON::Simple::PCRE_Regex.new(pattern => 'abc', options => 'mix') ⦄,
+           '100000000B610061626300696D780000';
+
+decodes-to ⦃ a => BSON::Simple::PCRE_Regex.new(pattern => 'abc', options => 'imx') ⦄,
+           '100000000B6100616263006D69780000';
+
+matches ⦃ a => BSON::Simple::PCRE_Regex.new(pattern => 'ab\\"ab', options => '') ⦄,
+        '100000000B610061625C226162000000';
+
+matches ⦃ '$regex' => BSON::Simple::PCRE_Regex.new(pattern => 'pattern', options => 'ix') ⦄,
+        '180000000B247265676578007061747465726E0069780000';
+
+matches ⦃ '$regex' => BSON::Simple::PCRE_Regex.new(pattern => 'pattern', options => ''), '$options' => 'ix' ⦄,
+        '270000000B247265676578007061747465726E000002246F7074696F6E73000300000069780000';
+
+fails-decode '0F0000000B610061006300696D0000', 'embedded null in pattern';
+
+fails-decode '100000000B61006162630069006D0000', 'embedded null in flags';
 
 
 # timestamp

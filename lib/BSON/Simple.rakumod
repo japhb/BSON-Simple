@@ -93,6 +93,11 @@ class Timestamp does Special {
     has uint32 $.t;
 }
 
+class PCRE_Regex does Special {
+    has Str:D $.pattern is required;
+    has Str:D $.options is required;
+}
+
 
 # Encode a Raku data structure into BSON
 multi bson-encode(Mu $value) is export {
@@ -285,6 +290,12 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
                     $buf.write-uint32($pos, .t, LittleEndian);
                     $pos += 4;
                 }
+                when PCRE_Regex {
+                    $buf.write-uint8($pos++, BSON_Regex);
+                    write-cstring($key);
+                    write-cstring(.pattern);
+                    write-cstring(.options.comb.sort.join);
+                }
                 default {
                     die "Don't know how to encode a {$value.^name}";
                 }
@@ -434,11 +445,10 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
                 $value = Any;
             }
             when BSON_Regex {
-                my $regex = read-cstring;
-                my $flags = read-cstring;
-                $flags ~~ /^ g? i? l? m? s? u? x? $/
-                    or die "Invalid or incorrectly ordered regex flags";
-                $value = ($regex, $flags);
+                my $pattern = read-cstring;
+                my $options = read-cstring().comb.sort.join;
+                $options ~~ /^ <[gilmsux]>* $/ or die "Invalid regex options";
+                $value = PCRE_Regex.new(:$pattern, :$options);
             }
             when BSON_DBPointer {
                 warn-deprecated;
