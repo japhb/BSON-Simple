@@ -42,6 +42,8 @@ enum BSONSubtype (
 
 
 PROCESS::<$BSON_SIMPLE_WARN_DEPRECATED> = False;
+PROCESS::<$BSON_SIMPLE_PLAIN_HASHES>    = False;
+PROCESS::<$BSON_SIMPLE_PLAIN_BLOBS>     = False;
 
 
 # Simple converter utility: hex string to binary buf
@@ -362,6 +364,9 @@ multi bson-decode(Blob:D $bson) is export {
 # Decode the next BSON document into native Raku structures,
 # starting from buffer position $pos
 multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
+    my $plain-hashes = $*BSON_SIMPLE_PLAIN_HASHES;
+    my $plain-blobs  = $*BSON_SIMPLE_PLAIN_BLOBS;
+
     my &read-cstring = -> {
         my $p = $pos;
         ++$p while $bson[$p];
@@ -420,6 +425,16 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             die "Incorrect array length" unless $pos == $start + $len;
             @array
         }
+        elsif $plain-hashes {
+            my %hash;
+            while $bson.read-uint8($pos++) -> $type {
+                my $pair = decode-element($type);
+                # XXXX: Does not detect key collisions
+                %hash{$pair.key} = $pair.value;
+            }
+            die "Incorrect document length" unless $pos == $start + $len;
+            %hash
+        }
         else {
             my %hash is Hash::Ordered;
             while $bson.read-uint8($pos++) -> $type {
@@ -457,7 +472,9 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
             }
             when BSON_Binary {
                 my ($subtype, $content) = read-binary;
-                $value = Binary.new(:$subtype, :$content);
+                $value = $plain-blobs && $subtype == 0
+                         ?? $content
+                         !! Binary.new(:$subtype, :$content);
             }
             when BSON_Undefined {
                 warn-deprecated;
