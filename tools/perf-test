@@ -7,16 +7,19 @@
 use JSON::Fast;
 use CBOR::Simple;
 use BSON::Simple;
-use BSON::Document;
+# use BSON::Document;
 
 
-my @order  = < JSON::Fast CBOR::Simple BSON::Simple BSON::Document >;
+# my @order  = < JSON::Fast CBOR::Simple BSON::Simple BSON::Document .raku/EVAL >;
+my @order  = < JSON::Fast CBOR::Simple BSON::Simple >;
 my $length = @order.map(*.chars).max;
 
 
-sub time-them(UInt:D $count, %by-codec) {
+sub time-them(%by-codec) {
+    my $count = $*COUNT;
+    my $runs  = $*RUNS;
     my %times;
-    my $runs = 1;
+
     for ^$runs {
         for @order -> $codec {
             my &test-code = %by-codec{$codec};
@@ -46,11 +49,17 @@ sub show-times(Str:D $test, %times) {
     }
 }
 
-sub show-sizes(%sizes) {
+sub time-and-show(Str:D $test, %by-codec) {
+    show-times($test, time-them(%by-codec));
+}
+
+sub show-sizes(%blobs) {
     say "\nSizes:";
     my $reference;
     for @order -> $codec {
-        next unless my $size = %sizes{$codec};
+        next unless my $blob = %blobs{$codec};
+        my $size = $blob.bytes;
+
         if $reference {
             printf "%-{$length}s  %8d (%.3fx)\n",
                    $codec, $size, $size / $reference;
@@ -62,78 +71,96 @@ sub show-sizes(%sizes) {
     }
 }
 
-sub time-and-show(Str:D $test, UInt:D $count, %by-codec) {
-    show-times($test, time-them($count, %by-codec));
+sub show-fidelity(%by-codec, $reference) {
+    say "\nFidelity:";
+
+    for @order -> $codec {
+        next unless my $decoder = %by-codec{$codec};
+        my $decoded = $decoder();
+
+        printf "%-{$length}s  %8s\n",
+               $codec, $decoded eqv $reference ?? 'pass' !! 'FAIL';
+    }
 }
 
-sub time-codecs(Str:D $variant, UInt:D $count, $struct) {
+
+sub time-codecs(Str:D $variant, $struct) {
     say "\n====> $variant <====";
 
-    my $json = to-json     $struct, :!pretty;
+    use MONKEY-SEE-NO-EVAL;
+    my $*BSON_SIMPLE_PLAIN_HASHES = True;
+    my $*BSON_SIMPLE_PLAIN_BLOBS  = True;
+
+    my $raku = $struct.raku.encode;
+    my $json = to-json($struct, :!pretty).encode;
     my $bson = bson-encode { b => $struct };
     my $cbor = cbor-encode $struct;
 
-    my $doc  = BSON::Document.new($bson);
+    # my $doc  = BSON::Document.new($bson);
+    my $doc  = '';
     my $doce = $doc.encode;
 
-    my %sizes := {
-        'JSON::Fast'     => $json.encode.bytes,
-        'CBOR::Simple'   => $cbor.bytes,
-        'BSON::Simple'   => $bson.bytes,
-        'BSON::Document' => $doce.bytes,
+    my %blobs := {
+        'JSON::Fast'     => $json,
+        'CBOR::Simple'   => $cbor,
+        'BSON::Simple'   => $bson,
+        'BSON::Document' => $doce,
+        '.raku/EVAL'     => $raku;
     };
-    show-sizes(%sizes);
 
-    say "\nFidelity:";
-    my $from-json = from-json   $json;
-    my $from-cbor = cbor-decode $cbor;
-    my $from-bson = bson-decode $bson;
-    my $from-doce = BSON::Document.new($doce);
-    say 'JSON::Fast          ', $from-json eqv $struct ?? 'pass' !! 'FAIL';
-    say 'CBOR::Simple        ', $from-cbor eqv $struct ?? 'pass' !! 'FAIL';
-    say 'BSON::Simple        ', $from-bson eqv $struct ?? 'pass' !! 'FAIL';
-    say 'BSON::Document      ', $from-doce eqv $struct ?? 'pass' !! 'FAIL';
+    my %encoders := {
+        'JSON::Fast'     => { my $j = to-json($struct, :!pretty).encode },
+        'CBOR::Simple'   => { my $c = cbor-encode $struct },
+        'BSON::Simple'   => { my $b = bson-encode { b => $struct } },
+        'BSON::Document' => { my $d = $doc.encode },
+        '.raku/EVAL'     => { my $r = $struct.raku.encode },
+    };
 
-    time-and-show('Decode', $count,
-                  {
-                      'JSON::Fast'     => { my $j = from-json $json },
-                      'CBOR::Simple'   => { my $c = cbor-decode $cbor },
-                      'BSON::Simple'   => { my $b = bson-decode $bson },
-                      'BSON::Document' => { my $d = BSON::Document.new($doce) },
-                  });
+    my %decoders := {
+        'JSON::Fast'     => { my $j = from-json $json },
+        'CBOR::Simple'   => { my $c = cbor-decode $cbor },
+        'BSON::Simple'   => { my $b = bson-decode($bson)<b> },
+        'BSON::Document' => { my $d = BSON::Document.new($doce)<b> },
+        '.raku/EVAL'     => { my $r = EVAL $raku.decode },
+    }
 
-    time-and-show('Encode', $count,
-                  {
-                      'JSON::Fast'     => { my $j = to-json $struct, :!pretty },
-                      'CBOR::Simple'   => { my $c = cbor-encode $struct },
-                      'BSON::Simple'   => { my $b = bson-encode { b => $struct } },
-                      'BSON::Document' => { my $d = $doc.encode },
-                  });
+    show-sizes(%blobs);
+    show-fidelity(%decoders, $struct);
+    time-and-show('Encode', %encoders);
+    time-and-show('Decode', %decoders);
 }
 
 
-multi MAIN(UInt:D $count = 10, IO() $source = 'fez-test.json') {
-    say "Testing $count iteration{$count == 1 ?? '' !! 's'}";
+#| Compare serialization codec performance and fidelity
+multi MAIN(
+    UInt:D :$runs   = 1,    #= Runs per test (for stable results)
+    UInt:D :$count  = 10,   #= Encodes/decodes per run (for sufficient duration)
+    IO()   :$source = 'fez-test.json'  #= Test file containing JSON data
+) {
+    say "Testing $runs run{$runs == 1 ?? '' !! 's'} of $count iteration{$count == 1 ?? '' !! 's'} each";
+
+    my $*COUNT = $count;
+    my $*RUNS  = $runs;
 
     my $json      = $source.slurp;
     my $from-json = from-json $json;
-    time-codecs('JSON source', $count, $from-json);
+    time-codecs('JSON source', $from-json);
 
     my $AoA-Int = [ [$++ xx 100] xx 100 ];
-    time-codecs('100 x 100 Int array', $count, $AoA-Int);
+    time-codecs('100 x 100 Int array', $AoA-Int);
 
     my $AoA-Num = [ [rand xx 100] xx 100 ];
-    time-codecs('100 x 100 Num array', $count, $AoA-Num);
+    time-codecs('100 x 100 Num array', $AoA-Num);
 
     my $AoA-Rat = [ [((^256).pick / (1..255).pick) xx 100] xx 100 ];
-    time-codecs('100 x 100 small Rat array', $count, $AoA-Rat);
+    time-codecs('100 x 100 small Rat array', $AoA-Rat);
 
     my $buf8 = buf8.new((^256).roll(100_000));
-    time-codecs('100_000 byte buf8', $count, $buf8);
+    time-codecs('100_000 byte buf8', $buf8);
 
     my $na32 = array[num32].new(rand xx 10_000);
-    time-codecs('10_000 entry array[num32]', $count, $na32);
+    time-codecs('10_000 entry array[num32]', $na32);
 
     my $na64 = array[num64].new(rand xx 10_000);
-    time-codecs('10_000 entry array[num64]', $count, $na64);
+    time-codecs('10_000 entry array[num64]', $na64);
 }
