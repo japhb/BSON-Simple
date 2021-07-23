@@ -180,6 +180,26 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
         $buf.write-int32($len-pos, $len, LittleEndian);
     }
 
+    # Write an array document, given a Positional
+    my &write-array = -> @array {
+        # Save location of length field; we'll need to backfill it later
+        my $len-pos = $pos;
+        $buf.write-int32($pos, 0, LittleEndian);
+        $pos += 4;
+
+        # Write elements with stringified index as key
+        my int $elems = @array.elems;
+        my int $i     = 0;
+        encode-element(~$i, @array.AT-POS($i++)) while $i < $elems;
+
+        # Trailing NUL byte
+        $buf.write-uint8($pos++, 0);
+
+        # Fix up length field (*includes* NUL and this byte count field)
+        my $len = $pos - $len-pos;
+        $buf.write-int32($len-pos, $len, LittleEndian);
+    }
+
     # Encode a general document element with e_name (key) $key
     my sub encode-element(Str:D $key, Mu $value) {
         with $value {
@@ -265,7 +285,7 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
             when Positional {
                 $buf.write-uint8($pos++, BSON_Array);
                 write-cstring($key);
-                write-document(.pairs);
+                write-array($_);
             }
             when Dateish {
                 encode-element($key, .DateTime.Instant);
