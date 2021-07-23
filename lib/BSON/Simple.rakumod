@@ -447,118 +447,126 @@ multi bson-decode(Blob:D $bson, Int:D $pos is rw) is export {
         }
     }
 
+    my sub warn-deprecated($type) {
+        warn "Deprecated BSON type $type at pos $pos"
+        if $*BSON_SIMPLE_WARN_DEPRECATED;
+    }
+
+    my Mu $value;
+    my @decoders =
+        {;},
+        { # BSON_Double
+            $value = $bson.read-num64($pos, LittleEndian);
+            $pos  += 8;
+        },
+        { # BSON_String
+            $value = read-string;
+        },
+        { # BSON_Document
+            $value = decode-document;
+        },
+        { # BSON_Array
+            $value = decode-document :as-array;
+        },
+        { # BSON_Binary
+            my ($subtype, $content) = read-binary;
+            $value = $plain-blobs && $subtype == 0
+                     ?? $content
+                     !! Binary.new(:$subtype, :$content);
+        },
+        { # BSON_Undefined
+            warn-deprecated(BSON_Undefined);
+            $value = Mu;
+        },
+        { # BSON_ObjectID
+            $value = ObjectID.new(id => $bson.subbuf($pos, 12));
+            $pos  += 12;
+        },
+        { # BSON_Boolean
+            my $bool = $bson.read-uint8($pos++);
+            die "Invalid boolean value '$bool'" unless 0 <= $bool <= 1;
+            $value = so $bool;
+        },
+        { # BSON_Datetime
+            my $ms = $bson.read-int64($pos, LittleEndian);
+            $value = Instant.from-posix($ms / 1000);
+            $pos  += 8;
+        },
+        { # BSON_Null
+            $value = Any;
+        },
+        { # BSON_Regex
+            my $pattern = read-cstring;
+            my $options = read-cstring().comb.sort.join;
+            $options ~~ /^ <[gilmsux]>* $/ or die "Invalid regex options";
+            $value = PCRE_Regex.new(:$pattern, :$options);
+        },
+        { # BSON_DBPointer
+            warn-deprecated(BSON_DBPointer);
+            my $ref = read-string;
+            my $oid = ObjectID.new(:id($bson.subbuf($pos, 12)));
+            $pos  += 12;
+            $value = DBPointer.new(:$ref, :$oid);
+        },
+        { # BSON_JavaScript
+            $value = JSCode.new(code => read-string);
+        },
+        { # BSON_Symbol
+            warn-deprecated(BSON_Symbol);
+            $value = Symbol(read-string);
+        },
+        { # BSON_ScopedJS
+            warn-deprecated(BSON_ScopedJS);
+            my $len-pos = $pos;
+            my $len     = $bson.read-int32($pos, LittleEndian);
+            $pos       += 4;
+
+            my $code    = read-string;
+            my $scope   = decode-document;
+
+            die "Wrong ScopedJS length" unless $len == $pos - $len-pos;
+
+            $value = ScopedJS.new(:$code, :$scope);
+        },
+        { # BSON_int32
+            $value = $bson.read-int32($pos, LittleEndian);
+            $pos  += 4;
+        },
+        { # BSON_Timestamp
+            my $i  = $bson.read-uint32($pos, LittleEndian);
+            $pos  += 4;
+            my $t  = $bson.read-uint32($pos, LittleEndian);
+            $pos  += 4;
+            $value = Timestamp.new(:$i, :$t);
+        },
+        { # BSON_int64
+            $value = Int64.new($bson.read-int64($pos, LittleEndian));
+            $pos  += 8;
+        },
+        { # BSON_decimal128
+            ...
+        },
+    ;
+
+
     my sub decode-element($type) {
         my Str:D $key = read-cstring;
-        my Mu    $value;
 
-        sub warn-deprecated() {
-            warn "Deprecated BSON type $type at pos $pos"
-                if $*BSON_SIMPLE_WARN_DEPRECATED;
-        }
-
-        given $type {
-            when BSON_Double {
-                $value = $bson.read-num64($pos, LittleEndian);
-                $pos  += 8;
-            }
-            when BSON_String {
-                $value = read-string;
-            }
-            when BSON_Document {
-                $value = decode-document;
-            }
-            when BSON_Array {
-                $value = decode-document :as-array;
-            }
-            when BSON_Binary {
-                my ($subtype, $content) = read-binary;
-                $value = $plain-blobs && $subtype == 0
-                         ?? $content
-                         !! Binary.new(:$subtype, :$content);
-            }
-            when BSON_Undefined {
-                warn-deprecated;
-                $value = Mu;
-            }
-            when BSON_ObjectID {
-                $value = ObjectID.new(id => $bson.subbuf($pos, 12));
-                $pos  += 12;
-            }
-            when BSON_Boolean {
-                my $bool = $bson.read-uint8($pos++);
-                die "Invalid boolean value '$bool'" unless 0 <= $bool <= 1;
-                $value = so $bool;
-            }
-            when BSON_Datetime {
-                my $ms = $bson.read-int64($pos, LittleEndian);
-                $value = Instant.from-posix($ms / 1000);
-                $pos  += 8;
-            }
-            when BSON_Null {
-                $value = Any;
-            }
-            when BSON_Regex {
-                my $pattern = read-cstring;
-                my $options = read-cstring().comb.sort.join;
-                $options ~~ /^ <[gilmsux]>* $/ or die "Invalid regex options";
-                $value = PCRE_Regex.new(:$pattern, :$options);
-            }
-            when BSON_DBPointer {
-                warn-deprecated;
-                my $ref = read-string;
-                my $oid = ObjectID.new(:id($bson.subbuf($pos, 12)));
-                $pos  += 12;
-                $value = DBPointer.new(:$ref, :$oid);
-            }
-            when BSON_JavaScript {
-                $value = JSCode.new(code => read-string);
-            }
-            when BSON_Symbol {
-                warn-deprecated;
-                $value = Symbol(read-string);
-            }
-            when BSON_ScopedJS {
-                warn-deprecated;
-                my $len-pos = $pos;
-                my $len     = $bson.read-int32($pos, LittleEndian);
-                $pos       += 4;
-
-                my $code    = read-string;
-                my $scope   = decode-document;
-
-                die "Wrong ScopedJS length" unless $len == $pos - $len-pos;
-
-                $value = ScopedJS.new(:$code, :$scope);
-            }
-            when BSON_int32 {
-                $value = $bson.read-int32($pos, LittleEndian);
-                $pos  += 4;
-            }
-            when BSON_Timestamp {
-                my $i  = $bson.read-uint32($pos, LittleEndian);
-                $pos  += 4;
-                my $t  = $bson.read-uint32($pos, LittleEndian);
-                $pos  += 4;
-                $value = Timestamp.new(:$i, :$t);
-            }
-            when BSON_int64 {
-                $value = Int64.new($bson.read-int64($pos, LittleEndian));
-                $pos  += 8;
-            }
-            when BSON_decimal128 {
-                ...
-            }
-            when BSON_MinKey {
-                $value = MinKey;
-            }
-            when BSON_MaxKey {
-                $value = MaxKey;
-            }
-            default {
-                die "Unknown BSON type $type";
+        my &decoder := @decoders[$type] // {
+            given $type {
+                when BSON_MinKey {
+                    $value = MinKey;
+                }
+                when BSON_MaxKey {
+                    $value = MaxKey;
+                }
+                default {
+                    die "Unknown BSON type $type";
+                }
             }
         }
 
+        decoder();
         $key => $value
     }
 
