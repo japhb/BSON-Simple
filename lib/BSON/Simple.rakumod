@@ -46,6 +46,10 @@ PROCESS::<$BSON_SIMPLE_PLAIN_HASHES>    = False;
 PROCESS::<$BSON_SIMPLE_PLAIN_BLOBS>     = False;
 
 
+# Precache a utf8 encoder, since we'll be doing it a LOT
+my $utf8-encoder = Encoding::Registry.find("utf8").encoder;
+
+
 # Simple converter utility: hex string to binary buf
 sub hex-decode(Str:D $hex, $buf-type = buf8) is export {
     $buf-type.new($hex.comb(2).map(*.parse-base(16)))
@@ -118,9 +122,9 @@ multi bson-encode(Mu $value) is export {
 # Encode a Raku data structure into BSON, starting at buffer position $pos
 multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export {
     # Write a C-style NUL-terminated UTF-8 encoded string
-    my &write-cstring = -> $string {
-        my $encoded = $string.encode;
-        my $bytes   = $encoded.elems;
+    my &write-cstring = -> \string {
+        my $encoded := $utf8-encoder.encode-chars(string);
+        my $bytes    = $encoded.elems;
 
         $buf.splice($pos, $bytes, $encoded);
         $pos += $bytes;
@@ -128,9 +132,9 @@ multi bson-encode(Mu $value, Int:D $pos is rw, Buf:D $buf = buf8.new) is export 
     }
 
     # Write a UTF-8 encoded string with *both* a leading byte count and trailing NUL
-    my &write-string = -> $string {
-        my $encoded = $string.encode;
-        my $bytes   = $encoded.elems;
+    my &write-string = -> \string {
+        my $encoded := $utf8-encoder.encode-chars(string);
+        my $bytes    = $encoded.elems;
 
         # Write $bytes + 1 here to include trailing NUL
         $buf.write-int32($pos, $bytes + 1, LittleEndian);
