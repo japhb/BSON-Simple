@@ -621,6 +621,13 @@ my $val2 = bson-decode($bson, my $pos = 0); # Updates $pos after decoding first 
 my $*BSON_SIMPLE_WARN_DEPRECATED = True;
 my $bad  = bson-decode($deprecated);     # Warns, but returns decoding anyway
 
+# Decode into default Raku Hash and Blob types, instead of ordered hashes
+# and wrapped BSON::Simple::Binary objects
+my $*BSON_SIMPLE_PLAIN_HASHES = True;
+my $*BSON_SIMPLE_PLAIN_BLOBS  = True;
+my $simple = bson-decode($bson);
+
+
 =end code
 
 
@@ -635,6 +642,12 @@ Note that because it is important to retain key order, BSON maps are decoded as
 ordered hashes using the Hash::Ordered module.  Likewise, several BSON types
 that must maintain a distinction from Raku's standard types are decoded into
 objects that do the BSON::Simple::Special role.
+
+If you would prefer to decode into standard (unordered) Raku hashes, you can
+set the <$*BSON_SIMPLE_PLAIN_HASHES> dynamic variable to C<True>.  Likewise, if
+you would prefer to decode default-subtype Binary fields into plain Raku
+C<Blob> objects (rather than wrapped into a C<BSON::Simple::Binary> object),
+set the <$*BSON_SIMPLE_PLAIN_BLOBS> dynamic variable to C<True>.
 
 
 =head1 CAVEATS
