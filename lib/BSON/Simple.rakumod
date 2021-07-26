@@ -669,6 +669,9 @@ parallelism overhead was fully understood.
 On the other hand, that original BSON module has a decade of real world testing
 and many hundreds of commits behind it, and this module is brand new.
 
+To see how this module compares to other data serialization modules, see
+L<serializer-perf|https://github.com/japhb/serializer-perf> .
+
 
 =head1 AUTHOR
 

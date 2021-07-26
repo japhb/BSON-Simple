@@ -49,6 +49,8 @@ The older [BSON Raku module](https://raku.land/cpan:MARTIMM/BSON) also implement
 
 On the other hand, that original BSON module has a decade of real world testing and many hundreds of commits behind it, and this module is brand new.
 
+To see how this module compares to other data serialization modules, see [serializer-perf](https://github.com/japhb/serializer-perf) .
+
 AUTHOR
 ======
 
