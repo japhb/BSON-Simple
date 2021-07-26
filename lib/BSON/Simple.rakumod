@@ -644,10 +644,10 @@ that must maintain a distinction from Raku's standard types are decoded into
 objects that do the BSON::Simple::Special role.
 
 If you would prefer to decode into standard (unordered) Raku hashes, you can
-set the <$*BSON_SIMPLE_PLAIN_HASHES> dynamic variable to C<True>.  Likewise, if
-you would prefer to decode default-subtype Binary fields into plain Raku
+set the C<$*BSON_SIMPLE_PLAIN_HASHES> dynamic variable to C<True>.  Likewise,
+if you would prefer to decode default-subtype Binary fields into plain Raku
 C<Blob> objects (rather than wrapped into a C<BSON::Simple::Binary> object),
-set the <$*BSON_SIMPLE_PLAIN_BLOBS> dynamic variable to C<True>.
+set the C<$*BSON_SIMPLE_PLAIN_BLOBS> dynamic variable to C<True>.
 
 
 =head1 CAVEATS

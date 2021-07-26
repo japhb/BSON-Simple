@@ -35,7 +35,7 @@ BSON::Simple is a trivial implementation of the core functionality of the [BSON 
 
 Note that because it is important to retain key order, BSON maps are decoded as ordered hashes using the Hash::Ordered module. Likewise, several BSON types that must maintain a distinction from Raku's standard types are decoded into objects that do the BSON::Simple::Special role.
 
-If you would prefer to decode into standard (unordered) Raku hashes, you can set the <$*BSON_SIMPLE_PLAIN_HASHES> dynamic variable to `True`. Likewise, if you would prefer to decode default-subtype Binary fields into plain Raku `Blob` objects (rather than wrapped into a `BSON::Simple::Binary` object), set the <$*BSON_SIMPLE_PLAIN_BLOBS> dynamic variable to `True`.
+If you would prefer to decode into standard (unordered) Raku hashes, you can set the `$*BSON_SIMPLE_PLAIN_HASHES` dynamic variable to `True`. Likewise, if you would prefer to decode default-subtype Binary fields into plain Raku `Blob` objects (rather than wrapped into a `BSON::Simple::Binary` object), set the `$*BSON_SIMPLE_PLAIN_BLOBS` dynamic variable to `True`.
 
 CAVEATS
 =======
