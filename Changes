@@ -1,4 +1,9 @@
 Revision history for BSON-Simple
 
+{{$NEXT}}
+  [Packaging]
+  - Update dist.ini to upload to Zef and to fix test badge on README
+
+
 0.0.1  2021-07-26
   - Initial version
