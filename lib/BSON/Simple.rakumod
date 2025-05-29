@@ -1,4 +1,4 @@
-unit module BSON::Simple:auth<zef:japhb>:api<0>:ver<0.0.1>;
+unit module BSON::Simple:auth<zef:japhb>:api<0>:ver<0.0.2>;
 
 
 use Base64::Native;

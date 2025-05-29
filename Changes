@@ -1,6 +1,8 @@
 Revision history for BSON-Simple
 
 {{$NEXT}}
+
+0.0.2  2025-05-28T22:33:21-07:00
   [Packaging]
   - Update dist.ini to upload to Zef and to fix test badge on README
 
